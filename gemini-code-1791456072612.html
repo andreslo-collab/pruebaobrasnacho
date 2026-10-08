@@ -1,0 +1,297 @@
+<script>
+/*__EXPORT_INICIO__*/
+/* ==========================================================================
+   Exportación: informe autónomo y enlaces con los datos dentro.
+   ========================================================================== */
+/* ============================================================================
+ * ENUE Obras — EXPORTACIÓN Y ENLACES COMPARTIBLES
+ * ----------------------------------------------------------------------------
+ * Resuelve el problema de que un enlace no se pueda abrir en otro ordenador:
+ *
+ *   1) INFORME AUTÓNOMO: genera un .html con los datos dentro. Se abre en
+ *      cualquier dispositivo, con o sin internet, sin servidor.
+ *   2) ENLACE CON DATOS DENTRO: el propio enlace lleva el dashboard comprimido
+ *      en el fragmento (#), de modo que funciona en cualquier hosting estático
+ *      (GitHub Pages, Vercel, Netlify) sin base de datos.
+ *
+ * Formato del enlace:  <url>#d=<version>:<base64url(deflate-raw(json))>
+ * ========================================================================== */
+(function (root) {
+    'use strict';
+
+    // ¡IMPORTANTE! Cambia TU_USUARIO y TU_REPOSITORIO por tus datos de GitHub
+    var PREFIJO_REPL = 'https://TU_USUARIO.github.io/TU_REPOSITORIO/ENUE-Obras-dashboard.html';
+
+    /* --------------------------------------------------------- utilidades base64 */
+
+    function bytesABase64Url(bytes) {
+        var s = '', chunk = 0x8000;
+        for (var i = 0; i < bytes.length; i += chunk) {
+            s += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + chunk, bytes.length)));
+        }
+        return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    function base64UrlABytes(txt) {
+        var b = String(txt).replace(/-/g, '+').replace(/_/g, '/');
+        while (b.length % 4) { b += '='; }
+        var bin = atob(b), out = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) { out[i] = bin.charCodeAt(i); }
+        return out;
+    }
+
+    /* --------------------------------------------------------------- compresión */
+
+    async function comprimir(texto) {
+        if (typeof CompressionStream === 'undefined') { return null; }
+        try {
+            var ds = new CompressionStream('deflate-raw');
+            var stream = new Blob([texto]).stream().pipeThrough(ds);
+            var buf = await new Response(stream).arrayBuffer();
+            return new Uint8Array(buf);
+        } catch (e) { return null; }
+    }
+
+    async function descomprimir(bytes) {
+        if (typeof DecompressionStream === 'undefined') { throw new Error('Este navegador no soporta descompresión.'); }
+        var ds = new DecompressionStream('deflate-raw');
+        var stream = new Blob([bytes]).stream().pipeThrough(ds);
+        var buf = await new Response(stream).arrayBuffer();
+        return new TextDecoder('utf-8').decode(buf);
+    }
+
+    /* --------------------------------------------------- datos -> cadena del enlace */
+
+    /** Limpia un objeto de campos internos (los que empiezan por _). */
+    function limpiaInternos(o) {
+        if (!o || typeof o !== 'object') { return o; }
+        Object.keys(o).forEach(function (k) {
+            if (k.charAt(0) === '_') { delete o[k]; }
+            else if (o[k] && typeof o[k] === 'object') { limpiaInternos(o[k]); }
+        });
+        return o;
+    }
+
+    /**
+     * Quita todo lo que no hace falta para pintar el informe y evita duplicar
+     * datos: las definiciones ya viajan en materiales.items, asi que de cada
+     * fase solo se guardan su nombre, titulo e identificador.
+     */
+    function datosCompactos(d) {
+        var copia = JSON.parse(JSON.stringify({
+            v: 3,
+            identificador: d.identificador,
+            periodo: d.periodo,
+            generado: d.generado,
+            pem: d.pem, cert: d.cert, pct: d.pct,
+            presupuesto: d.presupuesto || null,
+            certificacion: d.certificacion || null,
+            seguimiento: d.seguimiento || null,
+            factura: d.factura || null,
+            materiales: d.materiales || null,
+            obra: d.obra || null
+        }));
+        // 1) fuera todos los campos internos (_lineas, _hojas, _resumen, ...)
+        limpiaInternos(copia);
+        // 2) de las fases solo hace falta la cabecera: los items ya van aparte
+        if (copia.materiales && copia.materiales.fases) {
+            copia.materiales.fases = copia.materiales.fases.map(function (f) {
+                return { nombre: f.nombre, fase: f.fase, faseNum: f.faseNum, titulo: f.titulo,
+                         n: (f.definiciones || []).length };
+            });
+        }
+        return copia;
+    }
+
+    /** Devuelve la cadena "1:xxxx" (comprimida) o "0:xxxx" (sin comprimir). */
+    async function codificarDatos(d) {
+        var json = JSON.stringify(datosCompactos(d));
+        var comp = await comprimir(json);
+        if (comp && comp.length && comp.length < json.length) {
+            return { cadena: '1:' + bytesABase64Url(comp), bytes: comp.length, sinComprimir: json.length };
+        }
+        var bytes = new TextEncoder().encode(json);
+        return { cadena: '0:' + bytesABase64Url(bytes), bytes: bytes.length, sinComprimir: json.length };
+    }
+
+    async function decodificarDatos(cadena) {
+        if (!cadena) { return null; }
+        var i = cadena.indexOf(':');
+        var modo = cadena.slice(0, i), cuerpo = cadena.slice(i + 1);
+        var bytes = base64UrlABytes(cuerpo);
+        var json = (modo === '1') ? await descomprimir(bytes) : new TextDecoder('utf-8').decode(bytes);
+        return JSON.parse(json);
+    }
+
+    /* ------------------------------------------------------------ informe autónomo */
+
+    /**
+     * Extrae los recursos (CSS y motores) del PROPIO archivo HTML.
+     * El build marca los bloques con comentarios __DX_INICIO__/__DX_FIN__ para que
+     * el informe exportado sea byte a byte el mismo código que la aplicación.
+     * Si no se encuentran los marcadores (por ejemplo al probar con jsdom), se
+     * recurre a leer las etiquetas <script> y <style> del documento.
+     */
+    function extraerRecursos(doc) {
+        var d = doc || document;
+        var raiz = d.documentElement || {};
+        var fuente = raiz.outerHTML || raiz.innerHTML || '';
+        var css = '';
+        var mcss = fuente.match(/\/\*__CSS_INICIO__\*\/([\s\S]*?)\/\*__CSS_FIN__\*\//);
+        if (mcss) { css = mcss[1]; }
+        else {
+            var st = d.querySelector ? d.querySelector('style') : null;
+            css = st ? (st.textContent || '') : '';
+        }
+        var trozo = function (ini, fin) {
+            var re = new RegExp('/\\*' + ini + '\\*/([\\s\\S]*?)/\\*' + fin + '\\*/');
+            var m = fuente.match(re);
+            return m ? m[1] : '';
+        };
+        var dx = trozo('__DX_INICIO__', '__DX_FIN__');
+        var rep = trozo('__REPORT_INICIO__', '__REPORT_FIN__');
+        if (!dx || !rep) {
+            // respaldo: los <script> en orden (motor, motor de informes, app)
+            var scripts = d.querySelectorAll ? d.querySelectorAll('script') : [];
+            if (scripts.length >= 2) {
+                dx = dx || scripts[0].textContent || '';
+                rep = rep || scripts[1].textContent || '';
+            }
+        }
+        return { css: css, dx: dx, report: rep };
+    }
+
+    /** Construye el HTML del informe (mismo render que la app, en solo lectura). */
+    function construirInforme(datos, recursos) {
+        var r = recursos || extraerRecursos(document);
+        var json = JSON.stringify(datos);
+        var pestanas = root.DXReport.PESTANAS.map(function (t, i) {
+            return '<button class="tab' + (i === 0 ? ' activa' : '') + '" data-tab="' + t.id + '">' + t.etiqueta + '</button>';
+        }).join('');
+        return '<!DOCTYPE html>\n<html lang="es">\n<head>\n<meta charset="UTF-8">\n' +
+            '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
+            '<title>' + root.DXReport.esc(datos.identificador || 'Informe de obra') + ' — ENUE Obras</title>\n' +
+            '<style>' + r.css + '\n/* ajustes del informe de solo lectura */\n' +
+            '.cabecera-in .solo-lectura { font-size:11px; color:#67e8f9; background:#1e293b; border:1px solid #334155; padding:5px 10px; border-radius:999px; }\n' +
+            '@media print { .tabs, .cabecera { display:none; } .bloque, .kpi { break-inside: avoid; } }\n' +
+            '</style>\n</head>\n<body>\n<div id="root"></div>\n' +
+            '<script>\n/*__DX_INICIO__*/\n' + r.dx + '\n/*__DX_FIN__*/\n<\/script>\n' +
+            '<script>\n/*__REPORT_INICIO__*/\n' + r.report + '\n/*__REPORT_FIN__*/\n<\/script>\n' +
+            '<script>\nvar DATOS = ' + json.replace(/<\//g, '<\\/') + ';\n' +
+            '(function(){\n' +
+            '  var estado = { pestana: "resumen", fase: "todas", estado: "todos" };\n' +
+            '  function pintar() {\n' +
+            '    var cuerpo = DXReport.render(DATOS, estado.pestana, { fase: estado.fase, estado: estado.estado });\n' +
+            '    var tabs = DXReport.PESTANAS.map(function (t) {\n' +
+            '      return \'<button class="tab\' + (estado.pestana === t.id ? \' activa\' : \'\') + \'" data-tab="\' + t.id + \'">\' + t.etiqueta + \'</button>\';\n' +
+            '    }).join("");\n' +
+            '    document.getElementById("root").innerHTML =\n' +
+            '      \'<header class="cabecera"><div class="cabecera-in">\' +\n' +
+            '      \'<div class="marca"><span class="logo">EN</span><div><strong>ENUE Obras</strong><small>\' +\n' +
+            '      DXReport.esc(DATOS.identificador || "") + (DATOS.periodo ? " · " + DXReport.esc(DATOS.periodo) : "") +\n' +
+            '      \'</small></div></div><span class="solo-lectura">Informe de dirección · solo lectura</span>\' +\n' +
+            '      \'</div></header><main class="contenido"><div class="dash">\' +\n' +
+            '      \'<div class="dash-cabecera"><div><span class="dash-chip">Informe generado \' +\n' +
+            '      DXReport.esc((DATOS.generado || "").slice(0, 16).replace("T", " ")) + \'</span>\' +\n' +
+            '      \'<h1>Informe ejecutivo de quincena</h1><p>\' + DXReport.esc(DATOS.identificador || "") +\n' +
+            '      (DATOS.periodo ? " · " + DXReport.esc(DATOS.periodo) : "") + \'</p></div>\' +\n' +
+            '      \'<div class="dash-botones"><button class="btn-sec" onclick="window.print()">🖨️ Imprimir / PDF</button></div></div>\' +\n' +
+            '      \'<div class="tabs">\' + tabs + \'</div><div class="dash-cuerpo">\' + cuerpo + \'</div></div></main>\' +\n' +
+            '      \'<footer class="pie"><span>ENUE Obras</span><span>Informe autocontenido · sin conexión</span></footer>\';\n' +
+            '    Array.prototype.forEach.call(document.querySelectorAll(".tab"), function (b) {\n' +
+            '      b.onclick = function () { estado.pestana = b.getAttribute("data-tab"); pintar(); window.scrollTo(0, 0); };\n' +
+            '    });\n' +
+            '    Array.prototype.forEach.call(document.querySelectorAll("[data-fase]"), function (b) {\n' +
+            '      b.onclick = function () { var f = b.getAttribute("data-fase"); estado.fase = (f === "todas" || estado.fase === f) ? "todas" : f; pintar(); };\n' +
+            '    });\n' +
+            '    Array.prototype.forEach.call(document.querySelectorAll("[data-estado]"), function (b) {\n' +
+            '      b.onclick = function () { var e = b.getAttribute("data-estado"); estado.estado = (e === "todos" || estado.estado === e) ? "todos" : e; pintar(); };\n' +
+            '    });\n' +
+            '  }\n' +
+            '  pintar();\n' +
+            '  // El enlace puede traer los datos tras "#d=" o tras "?d=" (algunos clientes\n' +
+            '  // de correo recortan el fragmento). La app del editor tambien los lee.\n' +
+            '  var cadena = null;\n' +
+            '  var hash = location.hash || "";\n' +
+            '  var search = location.search || "";\n' +
+            '  if (hash.indexOf("#d=") === 0) { cadena = hash.slice(3); }\n' +
+            '  else if (search.indexOf("d=") !== -1) {\n' +
+            '    var mm = search.match(/[?&]d=([^&]+)/);\n' +
+            '    if (mm) { cadena = decodeURIComponent(mm[1]); }\n' +
+            '  }\n' +
+            '  if (cadena) {\n' +
+            '    var i = cadena.indexOf(":"); var modo = cadena.slice(0, i), cuerpo = cadena.slice(i + 1);\n' +
+            '    var b64 = cuerpo.replace(/-/g, "+").replace(/_/g, "/"); while (b64.length % 4) { b64 += "="; }\n' +
+            '    var bin = atob(b64), arr = new Uint8Array(bin.length);\n' +
+            '    for (var k = 0; k < bin.length; k++) { arr[k] = bin.charCodeAt(k); }\n' +
+            '    var p = (modo === "1")\n' +
+            '      ? new Response(new Blob([arr]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).text()\n' +
+            '      : Promise.resolve(new TextDecoder().decode(arr));\n' +
+            '    p.then(function (t) { DATOS = JSON.parse(t); pintar(); }).catch(function () { });\n' +
+            '  }\n' +
+            '})();\n<\/script>\n</body>\n</html>';
+    }
+
+    function descargar(nombre, contenido, tipo) {
+        var blob = new Blob([contenido], { type: tipo || 'text/html;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url; a.download = nombre;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    }
+
+    function nombreArchivo(datos) {
+        var base = String(datos.identificador || 'informe').toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'informe';
+        return 'ENUE-' + base + '.html';
+    }
+
+    /** Descarga el informe autónomo. */
+    function exportarInforme(datos) {
+        var html = construirInforme(datos, extraerRecursos(document));
+        descargar(nombreArchivo(datos), html);
+        return html.length;
+    }
+
+    /**
+     * Enlace con los datos dentro, listo para pegar en un correo o chat.
+     * Se devuelven dos variantes (# y ?) porque algunos clientes de correo
+     * recortan el fragmento; la app sabe leer las dos.
+     */
+    async function generarEnlaceLargo(datos) {
+        var cod = await codificarDatos(datos);
+        var esWeb = (typeof location !== 'undefined') && /^https?:/.test(location.protocol);
+        var base = esWeb ? location.href.split('#')[0].split('?')[0] : PREFIJO_REPL;
+        return {
+            url: base + '?d=' + cod.cadena, // MODIFICACIÓN: Por defecto forzamos ?d= para evitar roturas en Gmail
+            urlQuery: base + '?d=' + cod.cadena,
+            base: base,
+            bytes: cod.bytes,
+            sinComprimir: cod.sinComprimir,
+            publicada: esWeb,
+            demasiadoLargo: cod.cadena.length > 8000
+        };
+    }
+
+    root.DXExport = {
+        version: '1.0',
+        codificarDatos: codificarDatos,
+        decodificarDatos: decodificarDatos,
+        datosCompactos: datosCompactos,
+        construirInforme: construirInforme,
+        extraerRecursos: extraerRecursos,
+        exportarInforme: exportarInforme,
+        generarEnlaceLargo: generarEnlaceLargo,
+        descargar: descargar,
+        nombreArchivo: nombreArchivo,
+        bytesABase64Url: bytesABase64Url,
+        base64UrlABytes: base64UrlABytes
+    };
+
+}(typeof globalThis !== 'undefined' ? globalThis : this));
+
+/*__EXPORT_FIN__*/
+</script>

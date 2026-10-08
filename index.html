@@ -2727,6 +2727,30 @@ button:disabled { opacity: .6; cursor: default; }
         var cod = await codificarDatos(datos);
         var esWeb = (typeof location !== 'undefined') && /^https?:/.test(location.protocol);
         var base = esWeb ? location.href.split('#')[0].split('?')[0] : PREFIJO_REPL;
+        if (esWeb) {
+            try {
+                var resp = await fetch('/api/guardar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cadena: cod.cadena })
+                });
+                if (resp.ok) {
+                    var j = await resp.json();
+                    if (j && j.id) {
+                        return {
+                            url: base + '?c=' + j.id,
+                            urlQuery: base + '#c=' + j.id,
+                            base: base,
+                            bytes: cod.bytes,
+                            sinComprimir: cod.sinComprimir,
+                            publicada: true,
+                            corto: true,
+                            demasiadoLargo: false
+                        };
+                    }
+                }
+            } catch (e) { /* sin almacén: se usa el enlace largo */ }
+        }
         return {
             url: base + '#d=' + cod.cadena,
             urlQuery: base + '?d=' + cod.cadena,
@@ -3677,11 +3701,11 @@ button:disabled { opacity: .6; cursor: default; }
                     html += '<textarea class="enlace-area" readonly rows="4">' + esc(r.url) + '</textarea>' +
                         '<div class="chips">' +
                         '<button class="btn-sec" id="btn-copiar-enlace-largo">Copiar enlace</button>' +
-                        '<button class="btn-sec" id="btn-copiar-enlace-query">Copiar variante ?d=</button>' +
+                        (r.corto ? '' : '<button class="btn-sec" id="btn-copiar-enlace-query">Copiar variante ?d=</button>') +
                         '</div>' +
-                        '<p class="nota-pie">Enlace de ' + kb + ' KB' +
+                        (r.corto ? '<p class="nota-pie">Enlace corto (los datos están guardados en el servidor).</p>' : '<p class="nota-pie">Enlace largo de ' + kb + ' KB' +
                         (r.sinComprimir ? ' (comprimido desde ' + (r.sinComprimir / 1024).toFixed(1) + ' KB)' : '') +
-                        '. La variante <code>?d=</code> sirve por si algún programa recorta la parte del <code>#</code>.</p>';
+                        '. La variante <code>?d=</code> sirve por si algún programa recorta la parte del <code>#</code>.</p>');
                     if (r.demasiadoLargo) {
                         html += '<p class="warn">El enlace pasa de 8 KB y algunos correos o chats lo cortan. Si te ocurre, usa el ' +
                             '<strong>informe</strong> o pídeme los enlaces cortos con almacén en la nube.</p>';
@@ -3952,7 +3976,19 @@ button:disabled { opacity: .6; cursor: default; }
         var h = location.hash || '', s = location.search || '';
         if (h.indexOf('#d=') === 0) { return h.slice(3); }
         var mm = s.match(/[?&]d=([^&]+)/);
-        return mm ? decodeURIComponent(mm[1]) : null;
+        if (mm) { return decodeURIComponent(mm[1]); }
+        var hc = h.match(/^#c=([A-Za-z0-9_-]+)/);
+        var sc = s.match(/[?&]c=([A-Za-z0-9_-]+)/);
+        var id = hc ? hc[1] : (sc ? sc[1] : null);
+        return id ? 'C:' + id : null;
+    }
+
+    function resolverCadena(cadena) {
+        if (cadena.indexOf('C:') !== 0) { return Promise.resolve(cadena); }
+        return fetch('/api/obtener?id=' + encodeURIComponent(cadena.slice(2))).then(function (r) {
+            if (!r.ok) { throw new Error(r.status === 404 ? 'el enlace ha caducado o no existe' : 'error del servidor (' + r.status + ')'); }
+            return r.json();
+        }).then(function (j) { return j.cadena; });
     }
 
     function inicio() {
@@ -3964,7 +4000,7 @@ button:disabled { opacity: .6; cursor: default; }
             state.progreso = 50;
             state.pasoActual = 1;
             render();
-            DXExport.decodificarDatos(cadena).then(function (D) {
+            resolverCadena(cadena).then(function (c) { return DXExport.decodificarDatos(c); }).then(function (D) {
                 state.datos = rehidratar(D);
                 state.identificador = D.identificador || '';
                 state.periodo = D.periodo || '';

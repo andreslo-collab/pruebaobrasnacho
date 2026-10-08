@@ -3,269 +3,316 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#123F24">
 <title>ENUE Obras — Dashboard de certificaciones (v3.0)</title>
 <!-- Archivo autocontenido: no necesita internet salvo para leer PDF (PDF.js). -->
 <style>
 /*__CSS_INICIO__*/
 /* ============================================================================
-   ENUE Obras — estilos
+   ENUE Proyectos y Construcción — estilos corporativos
+   Paleta: verde corporativo, blanco hueso y negro.
+   Para ajustar el verde, cambia solo las variables --verde* de este bloque.
    ========================================================================== */
+:root {
+    --verde: #1B5E34;
+    --verde-osc: #123F24;
+    --verde-med: #2F7D4D;
+    --verde-claro: #E3EDE5;
+    --verde-lima: #9BD3AE;
+    --hueso: #F4F1E8;
+    --hueso-2: #EAE6D8;
+    --papel: #FBFAF5;
+    --linea: #D8D3C3;
+    --linea-fuerte: #B9B3A0;
+    --negro: #111411;
+    --texto: #1B1F1B;
+    --suave: #5A5D55;
+    --tenue: #8A8C82;
+    --ambar: #8A6A12;
+    --ambar-bg: #F6EDCF;
+    --ambar-bd: #E3D49B;
+    --rojo: #8E2A1D;
+    --rojo-bg: #F5E1DC;
+    --rojo-bd: #E2B8AE;
+    --alto-cab: 56px;
+}
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: #f1f5f9;
-    color: #0f172a;
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    background: var(--hueso);
+    color: var(--texto);
     -webkit-font-smoothing: antialiased;
+    font-variant-numeric: tabular-nums;
 }
 code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+h1, h2, h3 { color: var(--negro); }
 
 /* ---------------------------------------------------------------- cabecera */
-.cabecera { background: #0f172a; color: #fff; position: sticky; top: 0; z-index: 50; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
-.cabecera-in { max-width: 1200px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.marca { display: flex; align-items: center; gap: 10px; cursor: pointer; }
-.marca .logo { width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #06b6d4, #2563eb); display: grid; place-items: center; font-weight: 800; }
-.marca strong { display: block; font-size: 16px; letter-spacing: -.3px; }
-.marca small { color: #94a3b8; font-size: 11px; }
-.chip-lector { font-size: 11px; color: #67e8f9; background: #1e293b; border: 1px solid #334155; padding: 5px 10px; border-radius: 999px; white-space: nowrap; }
+.cabecera { background: var(--negro); color: var(--hueso); position: sticky; top: 0; z-index: 60; border-bottom: 3px solid var(--verde-med); }
+.cabecera-in { width: 100%; height: var(--alto-cab); padding: 0 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.marca { display: flex; align-items: center; gap: 14px; cursor: pointer; }
+.marca .logo { width: 34px; height: 34px; background: var(--verde); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 15px; letter-spacing: .5px; border-radius: 2px; }
+.marca strong { display: block; font-size: 15px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; line-height: 1.15; }
+.marca small { display: block; color: #A9AB9F; font-size: 11px; letter-spacing: .04em; line-height: 1.2; }
+.chip-lector, .cab-estado, .cabecera-in .solo-lectura { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #B5B7AB; white-space: nowrap; }
 
-.contenido { max-width: 1200px; margin: 0 auto; padding: 20px 16px 60px; }
-.pie { max-width: 1200px; margin: 0 auto; padding: 18px 16px 40px; display: flex; justify-content: space-between; gap: 10px; color: #64748b; font-size: 12px; flex-wrap: wrap; }
+.contenido { width: 100%; padding: 24px 28px 64px; }
+.pie { width: 100%; padding: 16px 28px 32px; display: flex; justify-content: space-between; gap: 10px; color: var(--suave); font-size: 12px; flex-wrap: wrap; border-top: 1px solid var(--linea); }
 
 /* ----------------------------------------------------------------- botones */
 .btn-primario, .btn-sec, .btn-mini {
-    font: inherit; font-weight: 700; cursor: pointer; border-radius: 10px; transition: .15s;
-    border: 1px solid transparent; padding: 10px 16px; font-size: 13px;
+    font: inherit; font-weight: 600; cursor: pointer; border-radius: 3px; transition: background .15s, color .15s, border-color .15s;
+    border: 1px solid transparent; padding: 9px 18px; font-size: 13px; letter-spacing: .01em;
 }
-.btn-primario { background: linear-gradient(135deg, #1d4ed8, #0891b2); color: #fff; box-shadow: 0 2px 8px rgba(29,78,216,.25); }
-.btn-primario:hover { filter: brightness(1.08); }
-.btn-primario.grande { padding: 14px 26px; font-size: 15px; }
-.btn-sec { background: #fff; color: #0f172a; border-color: #cbd5e1; }
-.btn-sec:hover { background: #f8fafc; }
-.btn-mini { padding: 5px 10px; font-size: 12px; background: #0f172a; color: #fff; }
-button:disabled { opacity: .6; cursor: default; }
+.btn-primario { background: var(--verde); color: #fff; border-color: var(--verde); }
+.btn-primario:hover { background: var(--verde-osc); border-color: var(--verde-osc); }
+.btn-primario.grande { padding: 13px 28px; font-size: 14px; }
+.btn-sec { background: transparent; color: var(--negro); border-color: var(--negro); }
+.btn-sec:hover { background: var(--negro); color: var(--hueso); }
+.btn-mini { padding: 4px 10px; font-size: 12px; background: var(--negro); color: #fff; }
+button:disabled { opacity: .55; cursor: default; }
+button:focus-visible, .tab:focus-visible, summary:focus-visible { outline: 2px solid var(--verde-med); outline-offset: 2px; }
 
 /* -------------------------------------------------------------- generador */
-.gen-hero { text-align: center; margin: 8px auto 22px; max-width: 640px; }
-.gen-hero h1 { font-size: 28px; margin: 0 0 6px; letter-spacing: -.6px; }
-.gen-hero p { margin: 0; color: #475569; font-size: 14px; }
-.gen-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 22px; box-shadow: 0 1px 3px rgba(15,23,42,.06); }
-.gen-card.centro { max-width: 560px; margin: 40px auto; text-align: center; }
-.gen-cab { display: flex; justify-content: space-between; align-items: center; margin: 20px 0 10px; padding-top: 16px; border-top: 1px solid #f1f5f9; font-weight: 700; font-size: 13px; }
-.gen-acciones { text-align: center; margin-top: 22px; }
-.nota-pie { font-size: 12px; color: #64748b; margin: 8px 0 0; }
-.chip { background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.gen-hero { text-align: left; margin: 0 0 22px; padding-bottom: 18px; border-bottom: 1px solid var(--linea); }
+.gen-hero h1 { font-size: 26px; font-weight: 700; margin: 0 0 6px; letter-spacing: -.01em; }
+.gen-hero p { margin: 0; color: var(--suave); font-size: 14px; max-width: 760px; }
+.gen-card { background: var(--papel); border: 1px solid var(--linea); border-radius: 3px; padding: 24px; }
+.gen-card.centro { max-width: 560px; margin: 64px auto; text-align: center; }
+.gen-cab { display: flex; justify-content: space-between; align-items: center; margin: 22px 0 12px; padding-top: 16px; border-top: 1px solid var(--linea); font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; }
+.gen-acciones { text-align: left; margin-top: 24px; }
+.nota-pie { font-size: 12px; color: var(--suave); margin: 8px 0 0; }
+.chip { background: var(--hueso-2); color: var(--texto); border: 1px solid var(--linea); border-radius: 2px; padding: 3px 9px; font-size: 11px; font-weight: 600; white-space: nowrap; }
 
-.zonas { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
-.zona { border: 2px dashed #cbd5e1; border-radius: 14px; padding: 12px; background: #f8fafc; display: flex; flex-direction: column; gap: 8px; transition: .15s; }
-.zona.arrastrando { border-color: #0891b2; background: #ecfeff; }
-.zona.con-archivo { border-style: solid; border-color: #86efac; background: #f0fdf4; }
+.zonas { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.zona { border: 1px dashed var(--linea-fuerte); border-radius: 3px; padding: 14px; background: var(--hueso); display: flex; flex-direction: column; gap: 8px; transition: background .15s, border-color .15s; }
+.zona.arrastrando { border-color: var(--verde); background: var(--verde-claro); }
+.zona.con-archivo { border: 1px solid var(--verde-med); background: #EEF4EF; }
 .zona-top { display: flex; justify-content: space-between; align-items: center; }
-.zona-id { font-size: 10px; font-weight: 800; letter-spacing: .5px; color: #64748b; }
-.zona-quitar { border: none; background: none; color: #94a3b8; cursor: pointer; font-size: 14px; line-height: 1; }
-.zona-quitar:hover { color: #dc2626; }
-.zona-titulo { font-size: 12.5px; font-weight: 700; cursor: pointer; line-height: 1.3; }
-.zona-titulo:hover { color: #0369a1; }
-.zona-vacio { font-size: 11px; color: #94a3b8; }
-.zona-archivo { background: #fff; border: 1px solid #bbf7d0; border-radius: 8px; padding: 6px 8px; font-size: 11px; }
-.zona-archivo span { display: block; font-weight: 600; color: #166534; word-break: break-all; }
-.zona-archivo small { color: #15803d; }
+.zona-id { font-size: 10px; font-weight: 700; letter-spacing: .12em; color: var(--verde); }
+.zona-quitar { border: none; background: none; color: var(--tenue); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 2px; }
+.zona-quitar:hover { color: var(--rojo); }
+.zona-titulo { font-size: 13px; font-weight: 600; cursor: pointer; line-height: 1.35; }
+.zona-titulo:hover { color: var(--verde); }
+.zona-vacio { font-size: 12px; color: var(--tenue); }
+.zona-archivo { background: var(--papel); border: 1px solid var(--linea); border-radius: 2px; padding: 6px 8px; font-size: 11px; }
+.zona-archivo span { display: block; font-weight: 600; color: var(--verde-osc); word-break: break-all; }
+.zona-archivo small { color: var(--suave); }
 .zona-pie { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: auto; }
-.zona-btn { font-size: 11px; font-weight: 700; color: #0369a1; background: #e0f2fe; border-radius: 6px; padding: 4px 9px; cursor: pointer; }
-.zona-btn:hover { background: #bae6fd; }
-.zona-texto { font-size: 11px; font-weight: 600; color: #475569; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 9px; cursor: pointer; }
-.zona-area { display: none; width: 100%; min-height: 90px; font-family: ui-monospace, monospace; font-size: 11px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; resize: vertical; }
+.zona-btn { font-size: 11px; font-weight: 600; color: #fff; background: var(--verde); border-radius: 2px; padding: 5px 11px; cursor: pointer; }
+.zona-btn:hover { background: var(--verde-osc); }
+.zona-texto { font-size: 11px; font-weight: 600; color: var(--texto); background: var(--papel); border: 1px solid var(--linea-fuerte); border-radius: 2px; padding: 4px 10px; cursor: pointer; }
+.zona-texto:hover { border-color: var(--negro); }
+.zona-area { display: none; width: 100%; min-height: 90px; font-family: ui-monospace, monospace; font-size: 11px; padding: 8px; border: 1px solid var(--linea-fuerte); border-radius: 3px; resize: vertical; background: var(--papel); }
 .zona-area.abierta { display: block; }
 
 /* ------------------------------------------------------------ procesando */
-.pasos { list-style: none; padding: 0; margin: 18px 0 0; text-align: left; }
-.pasos li { font-size: 12.5px; color: #94a3b8; padding: 5px 0 5px 22px; position: relative; }
-.pasos li::before { content: '○'; position: absolute; left: 0; }
-.pasos li.actual { color: #0369a1; font-weight: 700; }
-.pasos li.actual::before { content: '◐'; }
-.pasos li.hecho { color: #15803d; }
-.pasos li.hecho::before { content: '●'; }
-.progreso { font-weight: 800; color: #0f172a; margin: 8px 0 0; }
+.pasos { list-style: none; padding: 0; margin: 20px 0 0; text-align: left; }
+.pasos li { font-size: 13px; color: var(--tenue); padding: 6px 0 6px 24px; position: relative; }
+.pasos li::before { content: ''; position: absolute; left: 0; top: 10px; width: 10px; height: 10px; border: 1.5px solid var(--linea-fuerte); border-radius: 50%; }
+.pasos li.actual { color: var(--negro); font-weight: 600; }
+.pasos li.actual::before { border-color: var(--verde); background: var(--verde-claro); }
+.pasos li.hecho { color: var(--verde-osc); }
+.pasos li.hecho::before { border-color: var(--verde); background: var(--verde); }
+.progreso { font-weight: 700; color: var(--negro); margin: 10px 0 0; }
 
-.barra { background: #e2e8f0; border-radius: 999px; height: 10px; overflow: hidden; width: 100%; }
-.barra.grande { height: 14px; }
-.barra-i { height: 100%; background: linear-gradient(90deg, #2563eb, #06b6d4); border-radius: 999px; transition: width .2s; }
-.barra-i.verde { background: linear-gradient(90deg, #059669, #34d399); }
-.barra-i.ambar { background: linear-gradient(90deg, #d97706, #fbbf24); }
-.barra-i.rojo { background: linear-gradient(90deg, #b91c1c, #f87171); }
+.barra { background: var(--hueso-2); border-radius: 1px; height: 8px; overflow: hidden; width: 100%; }
+.barra.grande { height: 10px; }
+.barra-i { height: 100%; background: var(--verde); transition: width .2s; }
+.barra-i.verde { background: var(--verde); }
+.barra-i.ambar { background: #C29A1E; }
+.barra-i.rojo { background: #B5402F; }
+.barra-i.indet { width: 35%; animation: indet 1.2s ease-in-out infinite alternate; }
+@keyframes indet { from { margin-left: 0; } to { margin-left: 65%; } }
 
 /* ------------------------------------------- definición de materiales */
-.fases-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 14px; }
-.fase-card { font: inherit; text-align: left; cursor: pointer; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 5px; transition: .15s; }
-.fase-card:hover { border-color: #0891b2; background: #f8fafc; }
-.fase-card.activa { border-color: #0f172a; box-shadow: 0 0 0 2px rgba(15,23,42,.12); }
-.fase-nombre { font-weight: 800; font-size: 13px; color: #0f172a; }
-.fase-titulo { font-size: 11px; color: #475569; line-height: 1.35; min-height: 28px; }
-.fase-num { font-size: 10.5px; font-weight: 700; color: #0369a1; }
-.fase-detalle { font-size: 10.5px; color: #64748b; }
+.fases-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.fase-card { font: inherit; text-align: left; cursor: pointer; background: var(--papel); border: 1px solid var(--linea); border-left: 3px solid var(--linea-fuerte); border-radius: 2px; padding: 12px; display: flex; flex-direction: column; gap: 5px; transition: background .15s, border-color .15s; }
+.fase-card:hover { border-color: var(--verde-med); background: #fff; }
+.fase-card.activa { border-color: var(--negro); border-left-color: var(--verde); background: #fff; box-shadow: inset 0 0 0 1px var(--negro); }
+.fase-nombre { font-weight: 700; font-size: 13px; color: var(--negro); }
+.fase-titulo { font-size: 11px; color: var(--suave); line-height: 1.35; min-height: 28px; }
+.fase-num { font-size: 11px; font-weight: 700; color: var(--verde); }
+.fase-detalle { font-size: 11px; color: var(--suave); }
 
 /* ------------------------------------------- planos y opciones */
-.planos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
-.plano-card { border-radius: 12px; padding: 12px; border: 1px solid #e2e8f0; background: #f8fafc; display: flex; flex-direction: column; gap: 4px; }
-.plano-card.ok { background: #ecfdf5; border-color: #a7f3d0; }
-.plano-card.pend { background: #fffbeb; border-color: #fde68a; }
-.plano-card.warn { background: #fef2f2; border-color: #fecaca; }
-.plano-t { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px; color: #334155; }
-.plano-e { font-size: 12.5px; color: #0f172a; font-weight: 600; line-height: 1.4; }
-.plano-n { font-size: 11px; color: #64748b; }
+.planos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.plano-card { border-radius: 2px; padding: 12px; border: 1px solid var(--linea); border-left: 3px solid var(--linea-fuerte); background: var(--papel); display: flex; flex-direction: column; gap: 4px; }
+.plano-card.ok { background: #EEF4EF; border-color: #BFD3C4; border-left-color: var(--verde); }
+.plano-card.pend { background: #FAF4DF; border-color: var(--ambar-bd); border-left-color: #C29A1E; }
+.plano-card.warn { background: #FAECE8; border-color: var(--rojo-bd); border-left-color: #B5402F; }
+.plano-t { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--suave); }
+.plano-e { font-size: 13px; color: var(--negro); font-weight: 600; line-height: 1.4; }
+.plano-n { font-size: 11px; color: var(--suave); }
 
-.opciones-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; padding: 4px 0 12px; }
-.opciones-col { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; }
-.opciones-t { display: block; font-size: 11px; font-weight: 800; color: #0369a1; margin-bottom: 6px; }
-.opciones-col ul { margin: 0; padding-left: 16px; font-size: 11.5px; color: #334155; line-height: 1.6; }
+.opciones-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; padding: 4px 0 12px; }
+.opciones-col { background: var(--hueso); border: 1px solid var(--linea); border-radius: 2px; padding: 10px; }
+.opciones-t { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--verde); margin-bottom: 6px; }
+.opciones-col ul { margin: 0; padding-left: 16px; font-size: 12px; color: var(--texto); line-height: 1.6; }
 
-/* estados de las hojas de definición */
-.e-elegido { background: #dcfce7; color: #166534; border-color: #86efac; }
-.e-en-proceso { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
-.e-pendiente { background: #fef3c7; color: #92400e; border-color: #fde68a; }
-.e-no-procede { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
-.e-modificado { background: #ede9fe; color: #5b21b6; border-color: #ddd6fe; }
-.e-obra { background: #dcfce7; color: #166534; border-color: #86efac; }
-.e-sin-estado { background: #fff; color: #94a3b8; border-color: #e2e8f0; }
+/* estados */
+.e-elegido, .e-obra, .e-en-obra { background: #DCEADF; color: var(--verde-osc); border-color: #B3CDBA; }
+.e-en-proceso, .e-comprado { background: #E3E9EB; color: #2B4350; border-color: #C3CFD4; }
+.e-aprobado { background: #EBF0D6; color: #4A5C12; border-color: #D2DBA6; }
+.e-pendiente, .e-pedir-presupuesto { background: var(--ambar-bg); color: var(--ambar); border-color: var(--ambar-bd); }
+.e-pendiente-de-eleccion { background: var(--rojo-bg); color: var(--rojo); border-color: var(--rojo-bd); }
+.e-no-procede, .e-sin-estado { background: var(--hueso-2); color: var(--suave); border-color: var(--linea); }
+.e-modificado { background: #E8E4EE; color: #4A3F6B; border-color: #CFC8DC; }
+.e-sin-estado { background: transparent; }
 
-/* ------------------------------------------------------------- validación */
-.val-wrap { display: flex; flex-direction: column; gap: 16px; }
-.val-titulo h2 { margin: 0 0 4px; font-size: 22px; letter-spacing: -.4px; }
-.val-titulo p { margin: 0; color: #475569; font-size: 13px; }
-.val-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 18px; box-shadow: 0 1px 3px rgba(15,23,42,.05); }
-.val-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 14px; flex-wrap: wrap; }
-.val-head h3 { margin: 0 0 3px; font-size: 16px; }
-.val-head p { margin: 0; font-size: 12px; color: #64748b; }
-.val-badge { font-size: 11px; font-weight: 700; color: #0369a1; background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 999px; padding: 3px 10px; }
-.val-aviso { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 10px; padding: 10px 12px; font-size: 12px; margin-bottom: 12px; line-height: 1.5; }
-.val-aviso.grave { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
-.val-nota { font-size: 12px; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; }
-.val-nota .warn { color: #b45309; font-weight: 700; }
-.val-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
-.val-grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
-.val-grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 12px; }
+/* -------------------------------------------------------------- validación */
+.val-wrap { display: flex; flex-direction: column; gap: 18px; }
+.val-titulo { padding-bottom: 14px; border-bottom: 1px solid var(--linea); }
+.val-titulo h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; }
+.val-titulo p { margin: 0; color: var(--suave); font-size: 13px; }
+.val-card { background: var(--papel); border: 1px solid var(--linea); border-radius: 3px; padding: 20px; }
+.val-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; border-bottom: 1px solid var(--linea); padding-bottom: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.val-head h3 { margin: 0 0 3px; font-size: 16px; font-weight: 700; }
+.val-head p { margin: 0; font-size: 12px; color: var(--suave); }
+.val-badge { font-size: 11px; font-weight: 600; color: var(--verde-osc); background: var(--verde-claro); border: 1px solid #B3CDBA; border-radius: 2px; padding: 3px 10px; }
+.val-aviso { background: var(--ambar-bg); border: 1px solid var(--ambar-bd); border-left: 3px solid #C29A1E; color: #5E460A; border-radius: 2px; padding: 10px 12px; font-size: 12.5px; margin-bottom: 12px; line-height: 1.5; }
+.val-aviso.grave { background: var(--rojo-bg); border-color: var(--rojo-bd); border-left-color: #B5402F; color: #6E2016; }
+.val-nota { font-size: 12.5px; color: var(--suave); background: var(--hueso); border: 1px solid var(--linea); border-radius: 2px; padding: 8px 12px; margin-bottom: 10px; }
+.val-nota .warn { color: var(--ambar); font-weight: 700; }
+.val-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.val-grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.val-grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 12px; }
 .val-field { display: flex; flex-direction: column; gap: 5px; }
-.val-field > span { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: #475569; }
-.val-field small { font-size: 10px; color: #94a3b8; }
-.val-field.destacado > span { color: #0369a1; }
-.val-field.destacado .val-input { background: #f0f9ff; border-color: #bae6fd; font-weight: 700; }
-.val-input { font: inherit; font-size: 13px; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 9px; background: #fff; color: #0f172a; width: 100%; }
-.val-input:focus { outline: none; border-color: #0891b2; box-shadow: 0 0 0 3px rgba(8,145,178,.15); }
+.val-field > span { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--suave); }
+.val-field small { font-size: 11px; color: var(--tenue); }
+.val-field.destacado > span { color: var(--verde); }
+.val-field.destacado .val-input { background: #EEF4EF; border-color: #B3CDBA; font-weight: 600; }
+.val-input { font: inherit; font-size: 13px; padding: 8px 10px; border: 1px solid var(--linea-fuerte); border-radius: 3px; background: #fff; color: var(--negro); width: 100%; }
+.val-input:focus { outline: none; border-color: var(--verde); box-shadow: 0 0 0 3px rgba(27,94,52,.18); }
 .val-input.mini { padding: 4px 6px; font-size: 12px; text-align: right; font-family: ui-monospace, monospace; }
-.val-tabla-scroll { overflow: auto; border: 1px solid #e2e8f0; border-radius: 10px; max-height: 420px; }
-.val-tabla-scroll.alto { max-height: 520px; }
+.val-tabla-scroll { overflow: auto; border: 1px solid var(--linea); border-radius: 2px; max-height: 460px; background: #fff; }
+.val-tabla-scroll.alto { max-height: 560px; }
 .val-tabla { width: 100%; border-collapse: collapse; font-size: 12px; }
-.val-tabla th { position: sticky; top: 0; background: #f8fafc; text-align: left; padding: 8px 10px; font-size: 10.5px; text-transform: uppercase; color: #475569; border-bottom: 2px solid #e2e8f0; }
-.val-tabla td { padding: 6px 10px; border-bottom: 1px solid #f1f5f9; }
+.val-tabla th { position: sticky; top: 0; background: var(--hueso-2); text-align: left; padding: 8px 10px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--suave); border-bottom: 2px solid var(--negro); }
+.val-tabla td { padding: 6px 10px; border-bottom: 1px solid var(--hueso-2); }
 .val-tabla td.num, .val-tabla th.num { text-align: right; }
-.val-tabla tbody tr:hover { background: #f8fafc; }
+.val-tabla tbody tr:hover { background: #F7F5EE; }
 .val-acciones { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 
-/* panel de datos detectados automáticamente */
-.detectado-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
-.detectado-item { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 3px; }
-.detectado-t { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px; color: #0369a1; }
-.detectado-item strong { font-size: 14px; color: #0f172a; line-height: 1.35; }
-.detectado-item small { font-size: 10.5px; color: #64748b; }
+.detectado-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.detectado-item { background: var(--hueso); border: 1px solid var(--linea); border-left: 3px solid var(--verde); border-radius: 2px; padding: 12px; display: flex; flex-direction: column; gap: 3px; }
+.detectado-t { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--verde); }
+.detectado-item strong { font-size: 14px; color: var(--negro); line-height: 1.35; }
+.detectado-item small { font-size: 11px; color: var(--suave); }
 
-/* panel de texto leido */
-.val-texto { margin-top: 14px; border-top: 1px solid #f1f5f9; padding-top: 10px; }.val-texto summary { cursor: pointer; font-size: 12px; font-weight: 700; color: #0369a1; }
-.val-texto summary .warn { color: #b45309; }
+.val-texto { margin-top: 14px; border-top: 1px solid var(--linea); padding-top: 10px; }
+.val-texto summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--verde); }
+.val-texto summary .warn { color: var(--ambar); }
 .val-texto-acciones { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 10px 0 8px; }
 .val-texto-acciones .btn-sec { padding: 6px 12px; font-size: 12px; }
-.val-pre { background: #0f172a; color: #e2e8f0; font-family: ui-monospace, monospace; font-size: 11px; line-height: 1.5; padding: 12px; border-radius: 10px; max-height: 340px; overflow: auto; white-space: pre-wrap; word-break: break-word; margin: 0; }
+.val-pre { background: var(--negro); color: #E6E4DA; font-family: ui-monospace, monospace; font-size: 11px; line-height: 1.5; padding: 12px; border-radius: 2px; max-height: 340px; overflow: auto; white-space: pre-wrap; word-break: break-word; margin: 0; }
 
 /* -------------------------------------------------------------- dashboard */
-.dash { display: flex; flex-direction: column; gap: 16px; }
-.dash-cabecera { background: linear-gradient(135deg, #0f172a, #1e3a8a); color: #fff; border-radius: 18px; padding: 22px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
-.dash-cabecera h1 { margin: 8px 0 4px; font-size: 26px; letter-spacing: -.6px; }
-.dash-cabecera p { margin: 0; color: #cbd5e1; font-size: 13px; }
-.dash-chip { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: #a5f3fc; background: rgba(6,182,212,.18); border: 1px solid rgba(6,182,212,.35); border-radius: 999px; padding: 4px 10px; }
+.dash { display: flex; flex-direction: column; gap: 18px; }
+.dash-cabecera { background: var(--verde-osc); color: var(--hueso); border-radius: 0; margin: -24px -28px 0; padding: 26px 28px 24px; display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; border-bottom: 1px solid #0b2b18; }
+.dash-cabecera h1 { margin: 10px 0 4px; font-size: 26px; font-weight: 700; letter-spacing: -.01em; color: #fff; }
+.dash-cabecera p { margin: 0; color: #C9D6CC; font-size: 14px; }
+.dash-chip { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: var(--verde-lima); border-bottom: 1px solid rgba(155,211,174,.45); padding-bottom: 3px; }
 .dash-botones { display: flex; gap: 8px; flex-wrap: wrap; }
-.dash-enlace { font-size: 12px; color: #475569; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 14px; }
-.dash-enlace code { color: #0369a1; }
-.dash-avisos { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 10px 14px; font-size: 12px; color: #92400e; }
+.dash-cabecera .btn-primario { background: var(--hueso); color: var(--verde-osc); border-color: var(--hueso); }
+.dash-cabecera .btn-primario:hover { background: #fff; border-color: #fff; }
+.dash-cabecera .btn-sec { color: var(--hueso); border-color: rgba(244,241,232,.55); }
+.dash-cabecera .btn-sec:hover { background: var(--hueso); color: var(--verde-osc); border-color: var(--hueso); }
+.dash-enlace { font-size: 12px; color: var(--suave); background: var(--papel); border: 1px solid var(--linea); border-radius: 2px; padding: 10px 14px; }
+.dash-enlace code { color: var(--verde); }
+.dash-avisos { background: var(--ambar-bg); border: 1px solid var(--ambar-bd); border-left: 3px solid #C29A1E; border-radius: 2px; padding: 10px 14px; font-size: 12.5px; color: #5E460A; }
 .dash-avisos summary { cursor: pointer; font-weight: 700; }
 .dash-avisos ul { margin: 8px 0 0; padding-left: 18px; line-height: 1.6; }
 
-/* ---------------------------------------------- cómo compartir el dashboard */
-.dash-compartir { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px 16px; font-size: 12.5px; }
-.dash-compartir > summary { cursor: pointer; font-weight: 800; color: #0369a1; }
-.compartir-aviso { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a; border-radius: 10px; padding: 10px 12px; margin-top: 12px; line-height: 1.6; }
-.compartir-aviso.ok { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
-.compartir-aviso code { background: #fff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 0 4px; }
-.ok-enlace { color: #047857; font-weight: 700; margin: 0 0 8px; }
-.pasos-mini { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; color: #475569; }
-.pasos-mini span { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 9px; }
-.compartir-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 12px; }
-.compartir-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
-.compartir-card.recomendado { background: #ecfdf5; border-color: #a7f3d0; }
-.compartir-t { font-size: 12px; font-weight: 800; color: #0f172a; }
-.compartir-card p { margin: 0; color: #475569; line-height: 1.55; }
-.compartir-card code { background: #fff; border: 1px solid #e2e8f0; border-radius: 4px; padding: 0 4px; font-size: 11px; }
+/* ------------------------------------------------------- compartir */
+.dash-compartir { background: var(--papel); border: 1px solid var(--linea); border-radius: 2px; padding: 12px 18px; font-size: 13px; }
+.dash-compartir > summary { cursor: pointer; font-weight: 700; color: var(--negro); text-transform: uppercase; letter-spacing: .06em; font-size: 12px; }
+.compartir-aviso { background: var(--hueso); border: 1px solid var(--linea); color: var(--texto); border-radius: 2px; padding: 10px 12px; margin-top: 12px; line-height: 1.6; }
+.compartir-aviso.ok { background: #EEF4EF; border-color: #BFD3C4; color: var(--verde-osc); }
+.compartir-aviso code { background: #fff; border: 1px solid var(--linea); border-radius: 2px; padding: 0 4px; }
+.ok-enlace { color: var(--verde); font-weight: 700; margin: 0 0 8px; }
+.pasos-mini { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--suave); }
+.pasos-mini span { background: #fff; border: 1px solid var(--linea); border-radius: 2px; padding: 6px 9px; }
+.compartir-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin-top: 14px; }
+.compartir-card { background: var(--hueso); border: 1px solid var(--linea); border-radius: 2px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.compartir-card.recomendado { background: #EEF4EF; border-color: #BFD3C4; }
+.compartir-t { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--negro); }
+.compartir-card p { margin: 0; color: var(--suave); line-height: 1.55; }
+.compartir-card code { background: #fff; border: 1px solid var(--linea); border-radius: 2px; padding: 0 4px; font-size: 11px; }
 .compartir-card .btn-primario, .compartir-card .btn-sec { align-self: flex-start; }
 .salida-enlace { display: flex; flex-direction: column; gap: 8px; }
-.enlace-area { width: 100%; font-family: ui-monospace, monospace; font-size: 10.5px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; resize: vertical; }
-.salida-enlace .warn { color: #b45309; font-weight: 700; margin: 0; }
+.enlace-area { width: 100%; font-family: ui-monospace, monospace; font-size: 12px; padding: 8px; border: 1px solid var(--linea-fuerte); border-radius: 3px; resize: vertical; background: #fff; }
+.salida-enlace .warn, .warn { color: var(--ambar); font-weight: 600; }
+.salida-enlace .warn { margin: 0; }
 
-.tabs { display: flex; gap: 6px; overflow-x: auto; padding: 6px; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; }
-.tab { font: inherit; font-size: 12.5px; font-weight: 700; white-space: nowrap; cursor: pointer; border-radius: 9px; padding: 8px 13px; border: 1px solid #e2e8f0; background: #f8fafc; color: #475569; }
-.tab:hover { background: #f1f5f9; color: #0f172a; }
-.tab.activa { background: #0f172a; color: #fff; border-color: #0f172a; }
+/* -------------------------------------------------------------- pestañas */
+.tabs { display: flex; gap: 0; overflow-x: auto; background: var(--hueso); border-bottom: 1px solid var(--linea-fuerte); position: sticky; top: calc(var(--alto-cab) + 3px); z-index: 40; margin: 0 -28px; padding: 0 28px; }
+.tab { font: inherit; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; padding: 13px 16px 11px; border: none; border-bottom: 3px solid transparent; background: transparent; color: var(--suave); }
+.tab:hover { color: var(--negro); background: rgba(17,20,17,.04); }
+.tab.activa { color: var(--negro); border-bottom-color: var(--verde); }
 
-.dash-cuerpo { display: flex; flex-direction: column; gap: 16px; }
-.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
-.kpi { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 4px; }
-.kpi-t { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; color: #64748b; }
-.kpi-v { font-size: 22px; font-weight: 800; letter-spacing: -.5px; }
-.kpi-n { font-size: 11px; color: #64748b; }
-.kpi-n .fuente { display: block; color: #94a3b8; font-style: italic; }
-.kpi.k-cyan { background: #ecfeff; border-color: #a5f3fc; } .kpi.k-cyan .kpi-v { color: #0e7490; }
-.kpi.k-green { background: #ecfdf5; border-color: #a7f3d0; } .kpi.k-green .kpi-v { color: #047857; }
-.kpi.k-amber { background: #fffbeb; border-color: #fde68a; } .kpi.k-amber .kpi-v { color: #b45309; }
-.kpi.k-dark { background: #0f172a; border-color: #334155; } .kpi.k-dark .kpi-t { color: #7dd3fc; } .kpi.k-dark .kpi-v { color: #67e8f9; }
+.dash-cuerpo { display: flex; flex-direction: column; gap: 18px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+.kpi { background: var(--papel); border: 1px solid var(--linea); border-top: 3px solid var(--linea-fuerte); border-radius: 2px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+.kpi-t { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--suave); }
+.kpi-v { font-size: 24px; font-weight: 700; letter-spacing: -.01em; color: var(--negro); }
+.kpi-n { font-size: 12px; color: var(--suave); }
+.kpi-n .fuente { display: block; color: var(--tenue); font-style: italic; }
+.kpi.k-cyan { border-top-color: var(--negro); }
+.kpi.k-green { border-top-color: var(--verde); } .kpi.k-green .kpi-v { color: var(--verde); }
+.kpi.k-amber { border-top-color: #C29A1E; } .kpi.k-amber .kpi-v { color: var(--ambar); }
+.kpi.k-dark { background: var(--negro); border-color: var(--negro); border-top-color: var(--verde-med); }
+.kpi.k-dark .kpi-t { color: #A9AB9F; } .kpi.k-dark .kpi-v { color: var(--verde-lima); } .kpi.k-dark .kpi-n { color: #A9AB9F; }
 
-.bloque { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 18px; }
-.bloque-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
-.bloque-head h3 { margin: 0 0 3px; font-size: 16px; }
-.bloque-head p { margin: 0; font-size: 12px; color: #64748b; }
+.bloque { background: var(--papel); border: 1px solid var(--linea); border-radius: 2px; padding: 20px; }
+.bloque-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--linea); flex-wrap: wrap; }
+.bloque-head h3 { margin: 0 0 3px; font-size: 16px; font-weight: 700; }
+.bloque-head p { margin: 0; font-size: 12.5px; color: var(--suave); }
 .tabla-scroll { overflow-x: auto; }
-.tabla { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-.tabla th { text-align: left; padding: 9px 10px; font-size: 10.5px; text-transform: uppercase; color: #475569; border-bottom: 2px solid #e2e8f0; background: #f8fafc; }
-.tabla td { padding: 9px 10px; border-bottom: 1px solid #f1f5f9; }
+.tabla { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tabla th { text-align: left; padding: 9px 12px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--suave); border-bottom: 2px solid var(--negro); background: var(--hueso-2); }
+.tabla td { padding: 9px 12px; border-bottom: 1px solid var(--hueso-2); }
 .tabla td.num, .tabla th.num { text-align: right; }
-.tabla td.avance, .tabla th.avance { min-width: 190px; }
-.tabla tbody tr:hover { background: #f8fafc; }
-.pct { font-weight: 700; color: #0369a1; margin-left: 6px; }
+.tabla td.avance, .tabla th.avance { min-width: 200px; }
+.tabla tbody tr:hover { background: #F7F5EE; }
+.pct { font-weight: 700; color: var(--verde); margin-left: 6px; }
 
 .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-.chip-estado { font-size: 11px; font-weight: 700; border-radius: 999px; padding: 4px 10px; border: 1px solid; }
-.e-en-obra { background: #dcfce7; color: #166534; border-color: #86efac; }
-.e-comprado { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
-.e-aprobado { background: #cffafe; color: #0e7490; border-color: #a5f3fc; }
-.e-pedir-presupuesto { background: #fef3c7; color: #92400e; border-color: #fde68a; }
-.e-pendiente-de-eleccion { background: #ffe4e6; color: #9f1239; border-color: #fecdd3; }
-.e-sin-estado { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
-.chip.ok { background: #dcfce7; color: #166534; border-color: #86efac; }
-.chip.warn { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+.chip-estado { font-size: 11px; font-weight: 600; border-radius: 2px; padding: 4px 10px; border: 1px solid; cursor: pointer; }
+.chip.ok { background: #DCEADF; color: var(--verde-osc); border-color: #B3CDBA; }
+.chip.warn { background: var(--rojo-bg); color: var(--rojo); border-color: var(--rojo-bd); }
 
-.datos-ident { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: #475569; border-top: 1px solid #f1f5f9; padding-top: 12px; margin-top: 12px; }
+.datos-ident { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12.5px; color: var(--suave); border-top: 1px solid var(--linea); padding-top: 12px; margin-top: 12px; }
 .datos-ident.vertical { flex-direction: column; gap: 6px; border: none; padding: 0; margin: 0; }
-.formula { font-size: 13px; color: #334155; background: #f8fafc; border-left: 3px solid #0891b2; border-radius: 6px; padding: 9px 12px; margin: 12px 0 0; }
+.formula { font-size: 13px; color: var(--texto); background: var(--hueso); border-left: 3px solid var(--verde); border-radius: 0 2px 2px 0; padding: 9px 12px; margin: 12px 0 0; }
 .plegable { margin-top: 12px; }
-.plegable summary { cursor: pointer; font-size: 12.5px; font-weight: 700; color: #0369a1; padding: 8px 0; }
-.vacio { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 20px; text-align: center; color: #92400e; }
-.vacio strong { display: block; font-size: 14px; margin-bottom: 4px; }
-.vacio p { margin: 0; font-size: 12.5px; }
+.plegable summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--verde); padding: 8px 0; }
+.vacio { background: var(--hueso); border: 1px dashed var(--linea-fuerte); border-radius: 2px; padding: 24px; text-align: center; color: var(--suave); }
+.vacio strong { display: block; font-size: 14px; margin-bottom: 4px; color: var(--negro); }
+.vacio p { margin: 0; font-size: 13px; }
 
-@media (max-width: 640px) {
+.aviso-global { margin: 0; padding: 10px 28px; background: var(--rojo-bg); border-bottom: 1px solid var(--rojo-bd); color: var(--rojo); font-size: 13px; font-weight: 600; }
+
+@media (max-width: 760px) {
+    .cabecera-in, .contenido, .pie { padding-left: 16px; padding-right: 16px; }
+    .dash-cabecera { margin: -24px -16px 0; padding: 20px 16px; }
+    .tabs { margin: 0 -16px; padding: 0 16px; }
     .gen-hero h1 { font-size: 22px; }
-    .dash-cabecera h1 { font-size: 20px; }
-    .kpi-v { font-size: 18px; }
+    .dash-cabecera h1 { font-size: 21px; }
+    .kpi-v { font-size: 20px; }
+    .cab-estado { display: none; }
 }
-
-/* aviso global (errores inesperados del procesamiento) */
-.aviso-global { max-width: 1200px; margin: 14px auto 0; padding: 10px 16px; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; border-radius: 12px; font-size: 12.5px; font-weight: 600; }
+@media print {
+    body { background: #fff; }
+    .cabecera, .tabs, .dash-botones, .dash-compartir, .pie { display: none !important; }
+    .contenido { padding: 0; }
+    .dash-cabecera { margin: 0 0 12px; background: #fff; color: #000; border-bottom: 2px solid #000; padding: 0 0 10px; }
+    .dash-cabecera h1, .dash-cabecera p { color: #000; }
+    .bloque, .kpi { break-inside: avoid; }
+}
 
 /*__CSS_FIN__*/
 </style>
@@ -2002,7 +2049,7 @@ button:disabled { opacity: .6; cursor: default; }
 
         var caps = capitulosUnificados(D);
         if (caps.length) {
-            html += '<div class="bloque">' + filaCabecera('🏗️ Avance por capítulos', 'Presupuesto adjudicado frente a lo certificado.', caps.length + ' capítulos') +
+            html += '<div class="bloque">' + filaCabecera('Avance por capítulos', 'Presupuesto adjudicado frente a lo certificado.', caps.length + ' capítulos') +
                 tabla(['Código', 'Capítulo', 'Presupuesto', 'Certificado', 'Avance'],
                     caps.map(function (c) {
                         return ['<span class="mono">' + esc(c.codigo) + '</span>', esc(c.descripcion), fmtMoney(c.presupuesto), fmtMoney(c.certificado),
@@ -2013,7 +2060,7 @@ button:disabled { opacity: .6; cursor: default; }
         }
         var inf = materialesInfo(D);
         if (inf.items.length) {
-            html += '<div class="bloque">' + filaCabecera('📦 Estado de materiales', 'Resumen de estados del listado de materiales.', inf.items.length + ' materiales') +
+            html += '<div class="bloque">' + filaCabecera('Estado de materiales', 'Resumen de estados del listado de materiales.', inf.items.length + ' materiales') +
                 '<div class="chips">' + inf.porEstado.map(function (g) {
                     return '<span class="chip-estado e-' + g.clase + '">' + g.n + ' ' + esc(g.estado) + '</span>';
                 }).join('') + '</div></div>';
@@ -2030,7 +2077,7 @@ button:disabled { opacity: .6; cursor: default; }
             kpi('Cuota de IVA', fmtMoney(p.totales.ivaImporte)) +
             kpi('Total con IVA', fmtMoney(p.totales.total), null, 'k-green') +
             '</div>';
-        html += '<div class="bloque">' + filaCabecera('📊 Capítulos del presupuesto', 'Estructura jerárquica extraída del resumen contractual.',
+        html += '<div class="bloque">' + filaCabecera('Capítulos del presupuesto', 'Estructura jerárquica extraída del resumen contractual.',
             p.capitulos.length + ' capítulos / ' + (p.subcapitulos || []).length + ' subcapítulos');
         html += tabla(['Código', 'Capítulo', 'Importe s/IVA', '% s/Ppto'],
             p.capitulos.map(function (c) {
@@ -2059,7 +2106,7 @@ button:disabled { opacity: .6; cursor: default; }
             kpi('Total con IVA', fmtMoney(c.totales.total), null, 'k-green') +
             '</div>';
         if ((c.capitulos || []).length) {
-            html += '<div class="bloque">' + filaCabecera('📄 Capítulos certificados', 'Importes certificados por capítulo en esta certificación.', c.capitulos.length + ' capítulos') +
+            html += '<div class="bloque">' + filaCabecera('Capítulos certificados', 'Importes certificados por capítulo en esta certificación.', c.capitulos.length + ' capítulos') +
                 tabla(['Código', 'Capítulo', 'Certificado'],
                     c.capitulos.map(function (x) {
                         return ['<span class="mono">' + esc(x.codigo) + '</span>', esc(x.descripcion), x.actual === null ? '—' : fmtMoney(x.actual)];
@@ -2101,7 +2148,7 @@ button:disabled { opacity: .6; cursor: default; }
         var pen = s.kpis && s.kpis.anticipoPendiente ? s.kpis.anticipoPendiente.valor : null;
         if (ant !== null && des !== null && pen !== null) {
             var cuadra = Math.abs((ant - des) - pen) < 0.05;
-            html += '<div class="bloque">' + filaCabecera('💰 Conciliación del anticipo',
+            html += '<div class="bloque">' + filaCabecera('Conciliación del anticipo',
                 'Anticipo inicial − descontado = pendiente de amortizar.',
                 '') .replace('</div>', '<span class="chip ' + (cuadra ? 'ok' : 'warn') + '">' + (cuadra ? 'Cuadra' : 'Revisar') + '</span></div>') +
                 '<p class="formula">' + fmtMoney(ant) + ' − ' + fmtMoney(des) + ' = ' + fmtMoney(pen) + '</p></div>';
@@ -2118,7 +2165,7 @@ button:disabled { opacity: .6; cursor: default; }
             kpi('Cuota de IVA', fmtMoney(f.totales.iva)) +
             kpi('Total factura', fmtMoney(f.totales.total), null, 'k-green') +
             '</div>';
-        html += '<div class="bloque">' + filaCabecera('💶 Datos de la factura', 'Identificación fiscal de la factura emitida.') +
+        html += '<div class="bloque">' + filaCabecera('Datos de la factura', 'Identificación fiscal de la factura emitida.') +
             '<div class="datos-ident"><span>Nº: <strong>' + esc(f.ident.numero || '—') + '</strong></span>' +
             '<span>Fecha: <strong>' + esc(f.ident.fecha || '—') + '</strong></span>' +
             '<span>Cliente: <strong>' + esc(f.ident.cliente || '—') + '</strong></span>' +
@@ -2153,7 +2200,7 @@ button:disabled { opacity: .6; cursor: default; }
             kpi('No procede', String((m.estados && m.estados['NO PROCEDE']) || 0), 'descartadas', '') +
             '</div>';
 
-        html += '<div class="bloque">' + filaCabecera('🧱 Definición por fases',
+        html += '<div class="bloque">' + filaCabecera('Definición por fases',
             'Cada hoja del Excel de definición, con su recuento y su avance de decisión.', porFase.length + ' fases');
         html += '<div class="fases-grid">';
         porFase.forEach(function (f) {
@@ -2179,8 +2226,8 @@ button:disabled { opacity: .6; cursor: default; }
             }).join('') + '</div>';
         html += '<div class="chips">' + resumenEstados(items).map(function (g) {
             return '<span class="chip-estado ' + claseEstado(g.estado) + '" data-estado="' + esc(g.estado) + '"' +
-                (fe === g.estado ? ' style="outline:2px solid #0f172a"' : '') + '>' + g.n + ' ' + esc(g.estado) + '</span>';
-        }).join('') + (fe !== 'todos' ? '<span class="chip" data-estado="todos">✕ quitar filtro</span>' : '') + '</div>';
+                (fe === g.estado ? ' style="outline:2px solid #111411"' : '') + '>' + g.n + ' ' + esc(g.estado) + '</span>';
+        }).join('') + (fe !== 'todos' ? '<span class="chip" data-estado="todos">Quitar filtro</span>' : '') + '</div>';
         html += '</div>';
 
         if (visibles.length) {
@@ -2189,7 +2236,7 @@ button:disabled { opacity: .6; cursor: default; }
                 if (!grupos[i.grupo]) { grupos[i.grupo] = []; ordenG.push(i.grupo); }
                 grupos[i.grupo].push(i);
             });
-            html += '<div class="bloque">' + filaCabecera('📋 Definiciones',
+            html += '<div class="bloque">' + filaCabecera('Definiciones',
                 'Agrupadas por GFH.', visibles.length + ' de ' + items.length);
             ordenG.forEach(function (g) {
                 html += '<details class="plegable" open><summary>' + esc(g) + ' <span class="chip">' + grupos[g].length + '</span></summary>' +
@@ -2220,7 +2267,7 @@ button:disabled { opacity: .6; cursor: default; }
             '</div>';
 
         if ((o.planos || []).length) {
-            html += '<div class="bloque">' + filaCabecera('📐 Definición de planos',
+            html += '<div class="bloque">' + filaCabecera('Definición de planos',
                 'Estado de cada documento de definición según el resumen de obra.', o.planos.length + ' líneas');
             html += '<div class="planos-grid">';
             o.planos.forEach(function (p) {
@@ -2238,7 +2285,7 @@ button:disabled { opacity: .6; cursor: default; }
 
         if ((o.fases || []).length) {
             var defs = (D.materiales && D.materiales.fases) || [];
-            html += '<div class="bloque">' + filaCabecera('🚦 Avance de fases',
+            html += '<div class="bloque">' + filaCabecera('Avance de fases',
                 'Estado declarado en el resumen de obra y definiciones registradas en cada fase.', o.fases.length + ' fases');
             html += '<div class="tabla-scroll"><table class="tabla"><thead><tr>' +
                 '<th>Fase</th><th>Definiciones</th><th>Elegidas</th><th>Pendientes</th><th>Avance</th><th>Estado en el resumen</th>' +
@@ -2261,7 +2308,7 @@ button:disabled { opacity: .6; cursor: default; }
         }
 
         if ((o.estados || []).length || (o.pedidos || []).length) {
-            html += '<div class="bloque">' + filaCabecera('🏷️ Estados y pedidos de referencia', 'Valores admitidos en las hojas de definición.');
+            html += '<div class="bloque">' + filaCabecera('Estados y pedidos de referencia', 'Valores admitidos en las hojas de definición.');
             html += '<div class="chips">' + (o.estados || []).map(function (e) {
                 return '<span class="chip-estado ' + claseEstado(e) + '">' + esc(e) + '</span>';
             }).join('') + '</div>';
@@ -2274,7 +2321,7 @@ button:disabled { opacity: .6; cursor: default; }
         }
 
         if ((o.datos || []).length) {
-            html += '<div class="bloque">' + filaCabecera('📚 Listas de opciones (hoja «datos»)',
+            html += '<div class="bloque">' + filaCabecera('Listas de opciones (hoja «datos»)',
                 'Catálogo de valores de referencia de cada concepto: lo que se puede elegir en cada partida.', o.datos.length + ' bloques');
             o.datos.forEach(function (b, i) {
                 html += '<details class="plegable"' + (i < 3 ? ' open' : '') + '><summary>' + esc(b.titulo) + '</summary>';
@@ -2297,7 +2344,7 @@ button:disabled { opacity: .6; cursor: default; }
         var html = '<div class="chips">' + inf.porEstado.map(function (g) {
             return '<span class="chip-estado e-' + g.clase + '">' + g.n + ' ' + esc(g.estado) + '</span>';
         }).join('') + '</div>';
-        html += '<div class="bloque">' + filaCabecera('📦 Selección y entrega de materiales', 'Listado leído del Excel de materiales.', inf.items.length + ' materiales') +
+        html += '<div class="bloque">' + filaCabecera('Selección y entrega de materiales', 'Listado leído del Excel de materiales.', inf.items.length + ' materiales') +
             tabla(['Código', 'Material', 'Categoría', 'Cantidad', 'Proveedor', 'Entrega', 'Estado'],
                 inf.items.map(function (i) {
                     return ['<span class="mono">' + esc(i.id) + '</span>', esc(i.nombre), esc(i.categoria), esc(i.cantidad),
@@ -2314,7 +2361,7 @@ button:disabled { opacity: .6; cursor: default; }
         return '<div class="kpis">' + kpi('Avance certificado', fmtPct(k.pctCert), 'certificado / presupuesto', 'k-cyan') +
             kpi('Certificado', fmtMoney(k.cert)) + kpi('Presupuesto', fmtMoney(k.pem)) +
             kpi('Pendiente', k.pem !== null && k.cert !== null ? fmtMoney(k.pem - k.cert) : '—') + '</div>' +
-            '<div class="bloque">' + filaCabecera('🏗️ Avance de certificación vs presupuesto', 'Comparativa capítulo a capítulo.') +
+            '<div class="bloque">' + filaCabecera('Avance de certificación vs presupuesto', 'Comparativa capítulo a capítulo.') +
             tabla(['Código', 'Capítulo', 'Presupuesto', 'Certificado', 'Avance'],
                 caps.map(function (c) {
                     return ['<span class="mono">' + esc(c.codigo) + '</span>', esc(c.descripcion), fmtMoney(c.presupuesto), fmtMoney(c.certificado),
@@ -2326,12 +2373,12 @@ button:disabled { opacity: .6; cursor: default; }
         var c = D.certificacion, h = (D.historial || []);
         var html = '';
         if (c) {
-            html += '<div class="bloque">' + filaCabecera('📑 Certificación de este periodo', 'Importes de la certificación cargada.') +
+            html += '<div class="bloque">' + filaCabecera('Certificación de este periodo', 'Importes de la certificación cargada.') +
                 '<div class="kpis">' + kpi('Origen', fmtMoney(c.totales.origen)) + kpi('Quincena', fmtMoney(c.totales.actual)) +
                 kpi('IVA', fmtMoney(c.totales.iva)) + kpi('Total', fmtMoney(c.totales.total), null, 'k-green') + '</div></div>';
         }
         if (h.length) {
-            html += '<div class="bloque">' + filaCabecera('🗂️ Historial de dashboards generados', 'Evolución de lo certificado.', h.length + ' registros') +
+            html += '<div class="bloque">' + filaCabecera('Historial de dashboards generados', 'Evolución de lo certificado.', h.length + ' registros') +
                 tabla(['Fecha', 'Obra', 'Presupuesto', 'Certificado', '%'],
                     h.map(function (x) {
                         return [esc(new Date(x.fecha).toLocaleDateString('es-ES')), esc(x.identificador), fmtMoney(x.pem), fmtMoney(x.cert), fmtPct(x.pct)];
@@ -2352,7 +2399,7 @@ button:disabled { opacity: .6; cursor: default; }
         });
         var html = '';
         if (pendientes.length) {
-            html += '<div class="bloque">' + filaCabecera('⚡ Materiales que bloquean el avance',
+            html += '<div class="bloque">' + filaCabecera('Materiales que bloquean el avance',
                 'Sin proveedor decidido o sin pedir: son los que condicionan el plazo.', pendientes.length + ' pendientes') +
                 tabla(['Código', 'Material', 'Estado', 'Proveedor', 'Entrega'],
                     pendientes.map(function (i) {
@@ -2363,7 +2410,7 @@ button:disabled { opacity: .6; cursor: default; }
         }
         var acopio = inf.items.filter(function (i) { return i.estado === 'Comprado' || i.estado === 'En obra' || i.estado === 'ELEGIDO'; });
         if (acopio.length) {
-            html += '<div class="bloque">' + filaCabecera('📥 Acopios y material definido', 'Material ya decidido, comprado o recibido.', acopio.length + ' partidas') +
+            html += '<div class="bloque">' + filaCabecera('Acopios y material definido', 'Material ya decidido, comprado o recibido.', acopio.length + ' partidas') +
                 tabla(['Código', 'Material', 'Estado', 'Entrega'],
                     acopio.map(function (i) {
                         return ['<span class="mono">' + esc(i.id) + '</span>', esc(i.nombre),
@@ -2393,7 +2440,7 @@ button:disabled { opacity: .6; cursor: default; }
             filas.push(['Documentos de definición', esc((D.obra.planos || []).length + ' líneas')]);
         }
         if (!filas.length) { return sinDatos('Ficha técnica no disponible'); }
-        return '<div class="bloque">' + filaCabecera('📜 Datos del contrato y de los documentos', 'Metadatos extraídos de los archivos cargados.') +
+        return '<div class="bloque">' + filaCabecera('Datos del contrato y de los documentos', 'Metadatos extraídos de los archivos cargados.') +
             '<div class="datos-ident vertical">' + filas.map(function (f) {
                 return '<span>' + esc(f[0]) + ': <strong>' + f[1] + '</strong></span>';
             }).join('') + '</div>' +
@@ -2416,18 +2463,18 @@ button:disabled { opacity: .6; cursor: default; }
     };
 
     var PESTANAS = [
-        { id: 'resumen', etiqueta: '📊 Resumen ejecutivo' },
-        { id: 'presupuesto', etiqueta: '📊 Presupuesto por capítulos' },
-        { id: 'certificacion_real', etiqueta: '📄 Certificación real' },
-        { id: 'seguimiento_economico', etiqueta: '📒 Seguimiento económico' },
-        { id: 'facturacion', etiqueta: '💶 Facturación' },
-        { id: 'def_materiales', etiqueta: '🧱 Definición de materiales' },
-        { id: 'datos_obra', etiqueta: '🗂️ Datos y resumen de obra' },
-        { id: 'materiales', etiqueta: '📦 Materiales' },
-        { id: 'avance', etiqueta: '🏗️ Avance vs presupuesto' },
-        { id: 'certificaciones', etiqueta: '📑 Certificaciones quincenales' },
-        { id: 'ruta_critica', etiqueta: '⚡ Ruta crítica y acopios' },
-        { id: 'ficha_tecnica', etiqueta: '📜 Ficha técnica y cláusulas' }
+        { id: 'resumen', etiqueta: 'Resumen ejecutivo' },
+        { id: 'presupuesto', etiqueta: 'Presupuesto por capítulos' },
+        { id: 'certificacion_real', etiqueta: 'Certificación real' },
+        { id: 'seguimiento_economico', etiqueta: 'Seguimiento económico' },
+        { id: 'facturacion', etiqueta: 'Facturación' },
+        { id: 'def_materiales', etiqueta: 'Definición de materiales' },
+        { id: 'datos_obra', etiqueta: 'Datos y resumen de obra' },
+        { id: 'materiales', etiqueta: 'Materiales' },
+        { id: 'avance', etiqueta: 'Avance vs presupuesto' },
+        { id: 'certificaciones', etiqueta: 'Certificaciones quincenales' },
+        { id: 'ruta_critica', etiqueta: 'Ruta crítica y acopios' },
+        { id: 'ficha_tecnica', etiqueta: 'Ficha técnica y cláusulas' }
     ];
 
     /** HTML de una pestaña. filtros = {fase, estado} */
@@ -2634,7 +2681,7 @@ button:disabled { opacity: .6; cursor: default; }
             '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
             '<title>' + root.DXReport.esc(datos.identificador || 'Informe de obra') + ' — ENUE Obras</title>\n' +
             '<style>' + r.css + '\n/* ajustes del informe de solo lectura */\n' +
-            '.cabecera-in .solo-lectura { font-size:11px; color:#67e8f9; background:#1e293b; border:1px solid #334155; padding:5px 10px; border-radius:999px; }\n' +
+            '.cabecera-in .solo-lectura { font-size:11px; color:#B5B7AB; letter-spacing:.08em; text-transform:uppercase; }\n' +
             '@media print { .tabs, .cabecera { display:none; } .bloque, .kpi { break-inside: avoid; } }\n' +
             '</style>\n</head>\n<body>\n<div id="root"></div>\n' +
             '<script>\n/*__DX_INICIO__*/\n' + r.dx + '\n/*__DX_FIN__*/\n<\/script>\n' +
@@ -2649,7 +2696,7 @@ button:disabled { opacity: .6; cursor: default; }
             '    }).join("");\n' +
             '    document.getElementById("root").innerHTML =\n' +
             '      \'<header class="cabecera"><div class="cabecera-in">\' +\n' +
-            '      \'<div class="marca"><span class="logo">EN</span><div><strong>ENUE Obras</strong><small>\' +\n' +
+            '      \'<div class="marca"><span class="logo">EN</span><div><strong>ENUE</strong><small>\' +\n' +
             '      DXReport.esc(DATOS.identificador || "") + (DATOS.periodo ? " · " + DXReport.esc(DATOS.periodo) : "") +\n' +
             '      \'</small></div></div><span class="solo-lectura">Informe de dirección · solo lectura</span>\' +\n' +
             '      \'</div></header><main class="contenido"><div class="dash">\' +\n' +
@@ -2657,9 +2704,9 @@ button:disabled { opacity: .6; cursor: default; }
             '      DXReport.esc((DATOS.generado || "").slice(0, 16).replace("T", " ")) + \'</span>\' +\n' +
             '      \'<h1>Informe ejecutivo de quincena</h1><p>\' + DXReport.esc(DATOS.identificador || "") +\n' +
             '      (DATOS.periodo ? " · " + DXReport.esc(DATOS.periodo) : "") + \'</p></div>\' +\n' +
-            '      \'<div class="dash-botones"><button class="btn-sec" onclick="window.print()">🖨️ Imprimir / PDF</button></div></div>\' +\n' +
+            '      \'<div class="dash-botones"><button class="btn-sec" onclick="window.print()">Imprimir / PDF</button></div></div>\' +\n' +
             '      \'<div class="tabs">\' + tabs + \'</div><div class="dash-cuerpo">\' + cuerpo + \'</div></div></main>\' +\n' +
-            '      \'<footer class="pie"><span>ENUE Obras</span><span>Informe autocontenido · sin conexión</span></footer>\';\n' +
+            '      \'<footer class="pie"><span>ENUE Proyectos y Construcción</span><span>Informe autocontenido · sin conexión</span></footer>\';\n' +
             '    Array.prototype.forEach.call(document.querySelectorAll(".tab"), function (b) {\n' +
             '      b.onclick = function () { estado.pestana = b.getAttribute("data-tab"); pintar(); window.scrollTo(0, 0); };\n' +
             '    });\n' +
@@ -2727,30 +2774,6 @@ button:disabled { opacity: .6; cursor: default; }
         var cod = await codificarDatos(datos);
         var esWeb = (typeof location !== 'undefined') && /^https?:/.test(location.protocol);
         var base = esWeb ? location.href.split('#')[0].split('?')[0] : PREFIJO_REPL;
-        if (esWeb) {
-            try {
-                var resp = await fetch('/api/guardar', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cadena: cod.cadena })
-                });
-                if (resp.ok) {
-                    var j = await resp.json();
-                    if (j && j.id) {
-                        return {
-                            url: base + '?c=' + j.id,
-                            urlQuery: base + '#c=' + j.id,
-                            base: base,
-                            bytes: cod.bytes,
-                            sinComprimir: cod.sinComprimir,
-                            publicada: true,
-                            corto: true,
-                            demasiadoLargo: false
-                        };
-                    }
-                }
-            } catch (e) { /* sin almacén: se usa el enlace largo */ }
-        }
         return {
             url: base + '#d=' + cod.cadena,
             urlQuery: base + '?d=' + cod.cadena,
@@ -3042,7 +3065,7 @@ button:disabled { opacity: .6; cursor: default; }
         var avisos = (res.avisos || []).slice();
         if (!avisos.length && !res.avisoGrave) { return ''; }
         var clase = res.avisoGrave ? 'val-aviso grave' : 'val-aviso';
-        return '<div class="' + clase + '">' + avisos.map(function (a) { return '⚠️ ' + esc(a); }).join('<br>') + '</div>';
+        return '<div class="' + clase + '">' + avisos.map(function (a) { return '' + esc(a); }).join('<br>') + '</div>';
     }
 
     function tarjetaCabecera(titulo, subtitulo, cuerpo, res, zonaId) {
@@ -3065,8 +3088,8 @@ button:disabled { opacity: .6; cursor: default; }
         var garbled = DX.looksGarbled(lineas);
         var muestra = lineas.slice(0, 60).map(function (l) { return esc(l); }).join('\n');
         return '<details class="val-texto">' +
-            '<summary>🔍 Ver el texto leído (' + lineas.length + ' líneas)' +
-            (garbled ? ' — <span class="warn">⚠️ parece ilegible: usa «Pegar texto»</span>' : '') + '</summary>' +
+            '<summary>Ver el texto leído (' + lineas.length + ' líneas)' +
+            (garbled ? ' — <span class="warn">Parece ilegible: usa «Pegar texto»</span>' : '') + '</summary>' +
             '<div class="val-texto-acciones"><button class="btn-sec" data-copiar-texto="' + esc(zonaId) + '">Copiar texto</button>' +
             '<span class="nota-pie">Si un dato no aparece abajo, búscalo aquí: es exactamente lo que ha visto el motor.</span></div>' +
             '<pre class="val-pre">' + muestra + (lineas.length > 60 ? '\n… (' + (lineas.length - 60) + ' líneas más)' : '') + '</pre>' +
@@ -3092,7 +3115,7 @@ button:disabled { opacity: .6; cursor: default; }
             return i > 0 && Math.abs(c.puntos - a[0].puntos) < 1;
         });
         partes.push('<section class="val-card">' +
-            '<header class="val-head"><div><h3>🗂️ Obra y quincena (detectadas automáticamente)</h3>' +
+            '<header class="val-head"><div><h3>Obra y quincena (detectadas automáticamente)</h3>' +
             '<p>No hay que escribir nada: se deducen de los PDFs y del Excel. Puedes corregirlas aquí si algo no cuadra.</p></div>' +
             '<span class="val-badge">' + (idd.obraFuente ? 'detectado' : 'revisar') + '</span></header>' +
             '<div class="detectado-grid">' +
@@ -3106,14 +3129,14 @@ button:disabled { opacity: .6; cursor: default; }
             (idd.fechaTexto ? '<small>referencia del presupuesto</small>' : '') + '</div>' +
             '</div>' +
             ((idd.notas && idd.notas.length) ? '<div class="val-nota">' + idd.notas.map(function (n) { return esc(n); }).join('<br>') + '</div>' : '') +
-            ((idd.conflictos && idd.conflictos.length) ? '<div class="val-aviso">⚠️ ' +
+            ((idd.conflictos && idd.conflictos.length) ? '<div class="val-aviso">' +
                 idd.conflictos.map(function (c) { return esc(c); }).join('<br>') + '</div>' : '') +
-            (colision.length ? '<div class="val-aviso">⚠️ Hay más de un nombre de obra con la misma puntuación; revisa cuál es el correcto: ' +
+            (colision.length ? '<div class="val-aviso">Hay más de un nombre de obra con la misma puntuación; revisa cuál es el correcto: ' +
                 esc(colision.map(function (c) { return c.valor; }).join('  ·  ')) + '</div>' : '') +
-            '<details class="val-texto"><summary>🔍 Ver de dónde sale cada dato (y las otras opciones leídas)</summary>' +
+            '<details class="val-texto"><summary>Ver de dónde sale cada dato (y las otras opciones leídas)</summary>' +
             '<div class="val-tabla-scroll"><table class="val-tabla"><thead><tr><th>Fuente</th><th>Nombre leído</th><th class="num">Puntos</th></tr></thead><tbody>' +
             (idd.obraCandidatos || []).slice(0, 8).map(function (c, i) {
-                return '<tr' + (i === 0 ? ' style="background:#ecfdf5"' : '') + '><td class="mono">' + esc(c.fuente) + '</td><td>' +
+                return '<tr' + (i === 0 ? ' style="background:#E3EDE5"' : '') + '><td class="mono">' + esc(c.fuente) + '</td><td>' +
                     esc(c.valor) + '</td><td class="num">' + Math.round(c.puntos) + '</td></tr>';
             }).join('') + '</tbody></table></div></details>' +
             '<div class="val-grid-2" style="margin-top:12px">' +
@@ -3163,8 +3186,8 @@ button:disabled { opacity: .6; cursor: default; }
                     (pcaps.length
                         ? '<div class="val-tabla-scroll"><table class="val-tabla"><thead><tr><th>Código</th><th>Capítulo</th><th class="num">Importe s/IVA</th><th class="num">% s/Ppto</th></tr></thead><tbody>' + filas + '</tbody></table></div>'
                         : '<div class="val-aviso">No se han detectado capítulos. Pega el texto del resumen de presupuesto en el área de texto de la casilla del presupuesto.</div>');
-                partes.push(tarjetaCabecera('📊 Presupuesto base (PDF 2)', 'Cabecera, totales y capítulos del resumen contractual.', cuerpo, pre, 'pdf2'));
-            } catch (err) { partes.push(bloqueFallo('📊 Presupuesto base (PDF 2)', pre, err)); }
+                partes.push(tarjetaCabecera('Presupuesto base (PDF 2)', 'Cabecera, totales y capítulos del resumen contractual.', cuerpo, pre, 'pdf2'));
+            } catch (err) { partes.push(bloqueFallo('Presupuesto base (PDF 2)', pre, err)); }
         }
 
         // ---------- certificación
@@ -3199,8 +3222,8 @@ button:disabled { opacity: .6; cursor: default; }
                     (filasC
                         ? '<div class="val-tabla-scroll alto"><table class="val-tabla"><thead><tr><th>Código</th><th>Capítulo</th><th class="num">Certificado</th></tr></thead><tbody>' + filasC + '</tbody></table></div>'
                         : '<div class="val-aviso">No se han reconocido capítulos en la certificación. Los totales de arriba siguen siendo válidos.</div>');
-                partes.push(tarjetaCabecera('📄 Certificación actual (PDF 1)', 'Totales y capítulos certificados en la quincena.', cuerpoC, cer, 'pdf1'));
-            } catch (err) { partes.push(bloqueFallo('📄 Certificación actual (PDF 1)', cer, err)); }
+                partes.push(tarjetaCabecera('Certificación actual (PDF 1)', 'Totales y capítulos certificados en la quincena.', cuerpoC, cer, 'pdf1'));
+            } catch (err) { partes.push(bloqueFallo('Certificación actual (PDF 1)', cer, err)); }
         }
 
         // ---------- ficha de seguimiento
@@ -3228,9 +3251,9 @@ button:disabled { opacity: .6; cursor: default; }
                         (obj && obj.textoFuente ? '<small title="' + esc(obj.textoFuente) + '">leído de: ' + esc(String(obj.textoFuente).slice(0, 48)) + '</small>' : '') +
                         '</label>';
                 }
-                partes.push(tarjetaCabecera('📒 Ficha de seguimiento económico (PDF 3)', 'Los 7 KPIs clave del cuadro financiero de obra.',
+                partes.push(tarjetaCabecera('Ficha de seguimiento económico (PDF 3)', 'Los 7 KPIs clave del cuadro financiero de obra.',
                     '<div class="val-grid-3">' + celdas + '</div>', seg, 'pdf3'));
-            } catch (err) { partes.push(bloqueFallo('📒 Ficha de seguimiento económico (PDF 3)', seg, err)); }
+            } catch (err) { partes.push(bloqueFallo('Ficha de seguimiento económico (PDF 3)', seg, err)); }
         }
 
         // ---------- factura
@@ -3248,8 +3271,8 @@ button:disabled { opacity: .6; cursor: default; }
                     '<label class="val-field"><span>Cuota de IVA</span>' + inputNum(ftot.iva, 'totales.iva', 'pdf4') + '</label>' +
                     '<label class="val-field destacado"><span>Total factura</span>' + inputNum(ftot.total, 'totales.total', 'pdf4') + '</label>' +
                     '</div>';
-                partes.push(tarjetaCabecera('💶 Factura de la quincena (PDF 4)', 'Datos fiscales de la factura emitida.', cuerpoF, fac, 'pdf4'));
-            } catch (err) { partes.push(bloqueFallo('💶 Factura de la quincena (PDF 4)', fac, err)); }
+                partes.push(tarjetaCabecera('Factura de la quincena (PDF 4)', 'Datos fiscales de la factura emitida.', cuerpoF, fac, 'pdf4'));
+            } catch (err) { partes.push(bloqueFallo('Factura de la quincena (PDF 4)', fac, err)); }
         }
 
         // ---------- materiales: libro de definición por fases o listado genérico
@@ -3269,8 +3292,8 @@ button:disabled { opacity: .6; cursor: default; }
                         '<div class="chips">' + resumen.map(function (g) {
                             return '<span class="chip-estado ' + claseEstado(g.estado) + '">' + g.n + ' ' + esc(g.estado) + '</span>';
                         }).join('') + '</div>' +
-                        '<div class="val-nota">Estas definiciones alimentan las pestañas <strong>🧱 Definición de materiales</strong> y ' +
-                        '<strong>🗂️ Datos y resumen de obra</strong>. Se pueden editar después en el dashboard si hiciera falta.</div>';
+                        '<div class="val-nota">Estas definiciones alimentan las pestañas <strong>Definición de materiales</strong> y ' +
+                        '<strong>Datos y resumen de obra</strong>. Se pueden editar después en el dashboard si hiciera falta.</div>';
                 } else if (mitems.length) {
                     var fm = '';
                     for (var m2 = 0; m2 < mitems.length; m2++) {
@@ -3295,8 +3318,8 @@ button:disabled { opacity: .6; cursor: default; }
                         'con las columnas GFH, ELEMENTO, DESCRIPCIÓN, COMENTARIOS, ESTADO y FECHA. Para un listado simple, columnas de ' +
                         'Material, Cantidad, Proveedor, Fecha y Estado.</div>';
                 }
-                partes.push(tarjetaCabecera('📦 Materiales y definición (Excel 5)', 'Definiciones por fase y/o listado de materiales.', cuerpoM, mat, 'excel5'));
-            } catch (err) { partes.push(bloqueFallo('📦 Materiales y definición (Excel 5)', mat, err)); }
+                partes.push(tarjetaCabecera('Materiales y definición (Excel 5)', 'Definiciones por fase y/o listado de materiales.', cuerpoM, mat, 'excel5'));
+            } catch (err) { partes.push(bloqueFallo('Materiales y definición (Excel 5)', mat, err)); }
         }
 
         // ---------- zonas con resultado inesperado (documento no reconocido o error)
@@ -3320,7 +3343,7 @@ button:disabled { opacity: .6; cursor: default; }
         // ---------- acciones
         partes.push('<div class="val-acciones">' +
             '<button id="btn-volver-generador" class="btn-sec">← Cambiar archivos</button>' +
-            '<button id="btn-confirmar" class="btn-primario">✔ Confirmar y generar dashboard</button>' +
+            '<button id="btn-confirmar" class="btn-primario">Confirmar y generar dashboard</button>' +
             '</div>');
 
         return '<div class="val-wrap">' +
@@ -3420,45 +3443,25 @@ button:disabled { opacity: .6; cursor: default; }
             '<div><span class="dash-chip">Vista de dirección · solo lectura</span>' +
             '<h1>Informe ejecutivo de quincena</h1>' +
             '<p>' + esc(id) + (state.periodo ? ' · ' + esc(state.periodo) : '') + '</p></div>' +
-            (ro ? '<div class="dash-botones"><button class="btn-sec" onclick="window.print()">🖨️ Imprimir / PDF</button></div></div>' : ('<div class="dash-botones">' +
-            '<button id="btn-enlace-largo" class="btn-primario">🔗 Generar enlace para el cliente</button>' +
-            '<button id="btn-exportar" class="btn-sec">⬇️ Informe</button>' +
-            '<button id="btn-volver-validacion" class="btn-sec">← Volver a validación</button>' +
-            '<button id="btn-nuevo" class="btn-sec">＋ Nueva quincena</button>' +
+            (ro ? '<div class="dash-botones"><button class="btn-sec" onclick="window.print()">Imprimir / PDF</button></div></div>' : ('<div class="dash-botones">' +
+            '<button id="btn-enlace-largo" class="btn-primario">Generar enlace para el cliente</button>' +
+            '<button id="btn-exportar" class="btn-sec">Descargar informe</button>' +
+            '<button id="btn-volver-validacion" class="btn-sec">Volver a validación</button>' +
+            '<button id="btn-nuevo" class="btn-sec">Nueva quincena</button>' +
             '</div></div>' +
             '<details class="dash-compartir"' + (state.abrirCompartir ? ' open' : '') + '>' +
-            '<summary>📤 Enviar al cliente: cómo funciona el enlace</summary>' +
-            (publicada
-                ? '<div class="compartir-aviso ok">✅ <strong>La app está publicada.</strong> Pulsa el botón azul, copia el enlace y ' +
-                  'mándalo al cliente: al abrirlo verá el dashboard completo. No necesitas hacer nada más.</div>'
-                : '<div class="compartir-aviso">' +
-                  '<strong>Falta un paso, y es una sola vez:</strong> ahora mismo la app se está ejecutando como archivo de tu PC, ' +
-                  'así que un enlace no puede abrirse en otro sitio. Publica la app (5 minutos, gratis y sin instalar nada):' +
-                  '<div class="pasos-mini">' +
-                  '<span><strong>1.</strong> Renombra el archivo <code>ENUE-Obras-dashboard.html</code> a <code>index.html</code>.</span>' +
-                  '<span><strong>2.</strong> Entra en <code>app.netlify.com/drop</code> y arrastra el archivo encima.</span>' +
-                  '<span><strong>3.</strong> Te dará una dirección tipo <code>https://enue.netlify.app</code>. Ábrela.</span>' +
-                  '<span><strong>4.</strong> Desde ahí, carga los documentos y pulsa «Generar enlace»: funciona igual que ahora, ' +
-                  'pero el enlace ya se abre en el móvil de tu cliente.</span>' +
-                  '</div></div>') +
+            '<summary>Compartir con el cliente</summary>' +
             '<div class="compartir-grid">' +
-            '<div class="compartir-card' + (publicada ? ' recomendado' : '') + '">' +
+            '<div class="compartir-card recomendado">' +
             '<span class="compartir-t">Enlace para el cliente</span>' +
-            '<p>El enlace lleva el dashboard <strong>dentro</strong> (comprimido). El cliente solo tiene que pulsarlo: ' +
-            'verá el informe ejecutivo con las 12 pestañas, sin instalar nada y sin registrarse.</p>' +
+            '<p>Genera un enlace corto que abre este informe en cualquier dispositivo, sin instalar nada ni registrarse.</p>' +
+            (publicada ? '' : '<p class="warn">La aplicación está abierta como archivo local. Ábrela desde su dirección web (https://…) para que el enlace funcione en otros equipos.</p>') +
             '<div id="salida-enlace" class="salida-enlace"></div>' +
             '</div>' +
             '<div class="compartir-card">' +
-            '<span class="compartir-t">Enlaces cortos (opcional)</span>' +
-            '<p>Con un almacén en la nube (<strong>Supabase</strong>, <strong>Firebase</strong> o un <strong>Gist</strong>) el enlace pasa a ' +
-            'ser corto y estable: <code>tuapp/#/d/abc123</code>, sin límite de longitud y reutilizable.</p>' +
-            '<span class="chip">Dímelo y te lo monto</span>' +
-            '</div>' +
-            '<div class="compartir-card">' +
-            '<span class="compartir-t">Informe como archivo (alternativa)</span>' +
-            '<p>Si algún día necesitas enviarlo sin depender de internet, este botón descarga un único <code>.html</code> ' +
-            'con el dashboard y los datos dentro.</p>' +
-            '<button class="btn-sec" id="btn-exportar2">⬇️ Descargar informe</button>' +
+            '<span class="compartir-t">Informe como archivo</span>' +
+            '<p>Descarga un único archivo .html con el informe y los datos incluidos. Se abre sin conexión a internet.</p>' +
+            '<button class="btn-sec" id="btn-exportar2">Descargar informe</button>' +
             '</div>' +
             '</div></details>')) +
             (avisos.length ? '<details class="dash-avisos"><summary>' + avisos.length + ' aviso(s) de extracción — revisar antes de compartir</summary><ul>' +
@@ -3478,20 +3481,20 @@ button:disabled { opacity: .6; cursor: default; }
             return '<div class="zona' + (f ? ' con-archivo' : '') + '" data-zona="' + z.id + '">' +
                 '<input type="file" id="file-' + z.id + '" accept="' + z.acepta + '" hidden>' +
                 '<div class="zona-top"><span class="zona-id">' + esc(z.id.toUpperCase()) + '</span>' +
-                (f ? '<button class="zona-quitar" data-quitar="' + z.id + '" title="Quitar">✕</button>' : '') + '</div>' +
+                (f ? '<button class="zona-quitar" data-quitar="' + z.id + '" title="Quitar">×</button>' : '') + '</div>' +
                 '<label class="zona-titulo" for="file-' + z.id + '">' + esc(z.etiqueta) + '</label>' +
                 (f
-                    ? '<div class="zona-archivo"><span>✔ ' + esc(f.name) + '</span><small>' + fmtBytes(f.size) + '</small></div>'
+                    ? '<div class="zona-archivo"><span>' + esc(f.name) + '</span><small>' + fmtBytes(f.size) + '</small></div>'
                     : '<div class="zona-vacio">Arrastra el archivo aquí o pulsa para elegirlo</div>') +
                 '<div class="zona-pie"><label class="zona-btn" for="file-' + z.id + '">' + (f ? 'Reemplazar' : 'Elegir archivo') + '</label>' +
-                '<button class="zona-texto" data-toggle-texto="' + z.id + '">' + (txt ? 'Texto pegado ✔' : 'Pegar texto') + '</button></div>' +
+                '<button class="zona-texto" data-toggle-texto="' + z.id + '">' + (txt ? 'Texto pegado' : 'Pegar texto') + '</button></div>' +
                 '<textarea class="zona-area" data-texto="' + z.id + '" placeholder="Si el PDF no se lee bien, abre el documento, copia el texto y pégalo aquí. Tiene prioridad sobre el archivo.">' + esc(txt) + '</textarea>' +
                 '</div>';
         }).join('');
 
         var hist = '';
         if (state.historial.length) {
-            hist = '<div class="bloque"><div class="bloque-head"><div><h3>🗂️ Dashboards generados</h3><p>Se guardan en este navegador (localStorage), sin base de datos externa.</p></div>' +
+            hist = '<div class="bloque"><div class="bloque-head"><div><h3>Dashboards generados</h3><p>Se guardan en este navegador (localStorage), sin base de datos externa.</p></div>' +
                 '<span class="chip">' + state.historial.length + '</span></div>' +
                 tabla(['Fecha', 'Obra', 'Presupuesto', 'Certificado', ''],
                     state.historial.map(function (h) {
@@ -3536,17 +3539,19 @@ button:disabled { opacity: .6; cursor: default; }
         if (state.vista === 'generador') { cuerpo = vistaGenerador(); }
         else if (state.vista === 'procesando') { cuerpo = vistaProcesando(); }
         else if (state.vista === 'validacion') { cuerpo = vistaValidacion(); }
+        else if (state.vista === 'cargando') { cuerpo = '<div class="gen-card centro"><h2>Abriendo informe…</h2><div class="barra grande"><div class="barra-i indet"></div></div></div>'; }
+        else if (state.vista === 'errorEnlace') { cuerpo = '<div class="gen-card centro"><h2>No se ha podido abrir el informe</h2><p class="nota-pie">' + esc(state.errorEnlace || '') + '</p><p class="nota-pie">Solicita un nuevo enlace a quien te lo envió.</p></div>'; }
         else { cuerpo = vistaDashboard(); }
 
         root.innerHTML =
             '<header class="cabecera"><div class="cabecera-in">' +
-            '<div class="marca" id="btn-inicio"><span class="logo">EN</span>' +
-            '<div><strong>ENUE Obras</strong><small>Control de certificaciones y dashboard de dirección</small></div></div>' +
-            '<span class="chip-lector">v' + VERSION + ' · ' + (state.usaPdfJs ? 'lector PDF activo' : 'lector PDF se carga al procesar') + '</span>' +
+            '<div class="marca" id="btn-inicio"><span class="logo">E</span>' +
+            '<div><strong>ENUE</strong><small>Proyectos y Construcción</small></div></div>' +
+            '<span class="cab-estado">' + (state.soloLectura ? 'Informe de obra · solo lectura' : 'Control de certificaciones de obra') + '</span>' +
             '</div></header>' +
-            (state.avisoGlobal ? '<div class="aviso-global">⚠️ ' + esc(state.avisoGlobal) + '</div>' : '') +
+            (state.avisoGlobal ? '<div class="aviso-global">' + esc(state.avisoGlobal) + '</div>' : '') +
             '<main class="contenido">' + cuerpo + '</main>' +
-            '<footer class="pie"><span>© ' + new Date().getFullYear() + ' ENUE Obras</span>' +
+            '<footer class="pie"><span>© ' + new Date().getFullYear() + ' ENUE Proyectos y Construcción, S.L.</span>' +
             '<span>' + (state.soloLectura ? 'Informe compartido · solo lectura' : 'Datos guardados en este navegador · sin servidor') + '</span></footer>';
 
         enlazar();
@@ -3630,7 +3635,7 @@ button:disabled { opacity: .6; cursor: default; }
                 var txt = (res && res._lineas ? res._lineas.join('\n') : '');
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(txt).then(function () {
-                        b.textContent = '✔ Copiado';
+                        b.textContent = 'Copiado';
                         setTimeout(function () { b.textContent = 'Copiar texto'; }, 2000);
                     });
                 } else { window.prompt('Copia el texto:', txt.slice(0, 4000)); }
@@ -3688,33 +3693,33 @@ button:disabled { opacity: .6; cursor: default; }
                 var textoOriginal = boton.textContent;
                 boton.textContent = 'Generando enlace…';
                 if (salida) { salida.innerHTML = '<p class="nota-pie">Comprimiendo el dashboard…</p>'; }
-                DXExport.generarEnlaceLargo(contexto()).then(function (r) {
+                generarEnlace(contexto()).then(function (r) {
                     var kb = (r.bytes / 1024).toFixed(1);
                     var html = '';
                     if (!r.publicada) {
-                        html += '<p class="warn">⚠️ La app se está ejecutando como archivo local, así que este enlace todavía no se abrirá en otro ' +
-                            'dispositivo. Publica la app siguiendo los 4 pasos de arriba (una sola vez) y este mismo botón generará enlaces que ' +
-                            'el cliente podrá abrir en el móvil.</p>';
+                        html += '<p class="warn">La aplicación se está ejecutando como archivo local, así que este enlace no se abrirá en otro dispositivo. Ábrela desde su dirección web (https://…) y vuelve a generarlo.</p>';
+                    } else if (r.corto) {
+                        html += '<p class="ok-enlace">Enlace corto generado y copiado. Ya puedes enviárselo al cliente.</p>';
                     } else {
-                        html += '<p class="ok-enlace">✅ Enlace listo y copiado. Mándaselo al cliente tal cual: al abrirlo verá el dashboard completo.</p>';
+                        html += '<p class="warn">No se ha podido crear el enlace corto' + (r.errorCorto ? ' (' + esc(r.errorCorto) + ')' : '') +
+                            '. Se muestra el enlace largo, que también funciona pero algunos correos o chats pueden cortarlo.</p>';
                     }
-                    html += '<textarea class="enlace-area" readonly rows="4">' + esc(r.url) + '</textarea>' +
+                    html += '<textarea class="enlace-area" readonly rows="' + (r.corto ? 2 : 4) + '">' + esc(r.url) + '</textarea>' +
                         '<div class="chips">' +
                         '<button class="btn-sec" id="btn-copiar-enlace-largo">Copiar enlace</button>' +
                         (r.corto ? '' : '<button class="btn-sec" id="btn-copiar-enlace-query">Copiar variante ?d=</button>') +
                         '</div>' +
-                        (r.corto ? '<p class="nota-pie">Enlace corto (los datos están guardados en el servidor).</p>' : '<p class="nota-pie">Enlace largo de ' + kb + ' KB' +
-                        (r.sinComprimir ? ' (comprimido desde ' + (r.sinComprimir / 1024).toFixed(1) + ' KB)' : '') +
-                        '. La variante <code>?d=</code> sirve por si algún programa recorta la parte del <code>#</code>.</p>');
-                    if (r.demasiadoLargo) {
-                        html += '<p class="warn">El enlace pasa de 8 KB y algunos correos o chats lo cortan. Si te ocurre, usa el ' +
-                            '<strong>informe</strong> o pídeme los enlaces cortos con almacén en la nube.</p>';
+                        (r.corto
+                            ? '<p class="nota-pie">El enlace permanece activo durante 180 días.</p>'
+                            : '<p class="nota-pie">Enlace de ' + kb + ' KB' + (r.sinComprimir ? ' (comprimido desde ' + (r.sinComprimir / 1024).toFixed(1) + ' KB)' : '') + '.</p>');
+                    if (!r.corto && r.demasiadoLargo) {
+                        html += '<p class="warn">El enlace pasa de 8 KB y algunos correos o chats lo cortan. Si ocurre, usa «Descargar informe».</p>';
                     }
                     if (salida) { salida.innerHTML = html; }
                     // copia automática cuando la app está publicada
                     if (r.publicada && navigator.clipboard && navigator.clipboard.writeText) {
                         navigator.clipboard.writeText(r.url).then(function () {
-                            boton.textContent = '✔ Enlace copiado al portapapeles';
+                            boton.textContent = 'Enlace copiado al portapapeles';
                             setTimeout(function () { boton.textContent = textoOriginal; boton.disabled = false; }, 3000);
                         }).catch(function () {
                             boton.textContent = textoOriginal; boton.disabled = false;
@@ -3727,7 +3732,7 @@ button:disabled { opacity: .6; cursor: default; }
                         bc.onclick = function () {
                             if (navigator.clipboard && navigator.clipboard.writeText) {
                                 navigator.clipboard.writeText(r.url).then(function () {
-                                    bc.textContent = '✔ Copiado';
+                                    bc.textContent = 'Copiado';
                                     setTimeout(function () { bc.textContent = 'Copiar enlace'; }, 2000);
                                 });
                             } else { window.prompt('Copia el enlace:', r.url); }
@@ -3738,7 +3743,7 @@ button:disabled { opacity: .6; cursor: default; }
                         bq.onclick = function () {
                             if (navigator.clipboard && navigator.clipboard.writeText) {
                                 navigator.clipboard.writeText(r.urlQuery).then(function () {
-                                    bq.textContent = '✔ Copiado';
+                                    bq.textContent = 'Copiado';
                                     setTimeout(function () { bq.textContent = 'Copiar variante ?d='; }, 2000);
                                 });
                             } else { window.prompt('Copia el enlace:', r.urlQuery); }
@@ -3925,6 +3930,32 @@ button:disabled { opacity: .6; cursor: default; }
         window.scrollTo(0, 0);
     }
 
+    /** Genera el enlace: corto (guardado en la nube) y, si falla, el largo con los datos dentro. */
+    function generarEnlace(ctx) {
+        return DXExport.generarEnlaceLargo(ctx).then(function (r) {
+            r.corto = false;
+            if (!r.publicada) { return r; }
+            var cadena = r.url.slice(r.url.indexOf('#d=') + 3);
+            return fetch('/api/guardar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cadena: cadena })
+            }).then(function (resp) {
+                if (!resp.ok) { throw new Error('HTTP ' + resp.status); }
+                return resp.json();
+            }).then(function (j) {
+                if (!j || !j.id) { throw new Error('respuesta sin identificador'); }
+                r.url = r.base + '?c=' + j.id;
+                r.urlQuery = r.url;
+                r.corto = true;
+                return r;
+            }).catch(function (e) {
+                r.errorCorto = String((e && e.message) || e);
+                return r;
+            });
+        });
+    }
+
     /** Descarga el informe autónomo (un solo archivo con los datos dentro). */
     function exportarInforme() {
         try {
@@ -3976,31 +4007,28 @@ button:disabled { opacity: .6; cursor: default; }
         var h = location.hash || '', s = location.search || '';
         if (h.indexOf('#d=') === 0) { return h.slice(3); }
         var mm = s.match(/[?&]d=([^&]+)/);
-        if (mm) { return decodeURIComponent(mm[1]); }
-        var hc = h.match(/^#c=([A-Za-z0-9_-]+)/);
-        var sc = s.match(/[?&]c=([A-Za-z0-9_-]+)/);
-        var id = hc ? hc[1] : (sc ? sc[1] : null);
-        return id ? 'C:' + id : null;
+        return mm ? decodeURIComponent(mm[1]) : null;
     }
 
-    function resolverCadena(cadena) {
-        if (cadena.indexOf('C:') !== 0) { return Promise.resolve(cadena); }
-        return fetch('/api/obtener?id=' + encodeURIComponent(cadena.slice(2))).then(function (r) {
-            if (!r.ok) { throw new Error(r.status === 404 ? 'el enlace ha caducado o no existe' : 'error del servidor (' + r.status + ')'); }
-            return r.json();
-        }).then(function (j) { return j.cadena; });
+    function idCortoDelEnlace() {
+        var mm = (location.search || '').match(/[?&]c=([A-Za-z0-9_-]{4,20})/);
+        return mm ? mm[1] : null;
     }
 
     function inicio() {
         cargarHistorial();
         var cadena = cadenaDelEnlace();
-        if (cadena) {
+        var corto = cadena ? null : idCortoDelEnlace();
+        if (cadena || corto) {
             // Enlace compartido: se muestra el dashboard directamente, en solo lectura.
-            state.vista = 'procesando';
-            state.progreso = 50;
-            state.pasoActual = 1;
+            state.vista = 'cargando';
             render();
-            resolverCadena(cadena).then(function (c) { return DXExport.decodificarDatos(c); }).then(function (D) {
+            var obtener = cadena ? Promise.resolve(cadena) : fetch('/api/obtener?id=' + encodeURIComponent(corto)).then(function (resp) {
+                if (resp.status === 404) { throw new Error('El enlace no existe o ha caducado.'); }
+                if (!resp.ok) { throw new Error('No se ha podido consultar el enlace (HTTP ' + resp.status + ').'); }
+                return resp.json();
+            }).then(function (j) { return j.cadena; });
+            obtener.then(function (c) { return DXExport.decodificarDatos(c); }).then(function (D) {
                 state.datos = rehidratar(D);
                 state.identificador = D.identificador || '';
                 state.periodo = D.periodo || '';
@@ -4012,13 +4040,13 @@ button:disabled { opacity: .6; cursor: default; }
                 state.vista = 'dashboard';
                 render();
             }).catch(function (e) {
-                state.vista = 'generador';
-                state.avisoGlobal = 'No se ha podido abrir el enlace (¿está incompleto o cortado?): ' + (e.message || e);
+                state.vista = 'errorEnlace';
+                state.errorEnlace = (e && e.message) || String(e);
+                state.soloLectura = true;
                 render();
             });
             return;
         }
-        // PDF.js se carga de forma perezosa: solo cuando se procesa un PDF.
         render();
     }
 

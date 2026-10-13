@@ -1113,6 +1113,29 @@ button:disabled { opacity: .6; cursor: default; }
 
         // --- capítulos y subcapítulos
         var totalesCap = {};
+        // Columnas del cuadro de capítulos (orden en que aparecen en la cabecera del PDF)
+        var colsHeader = [];
+        for (var hi = 0; hi < lines.length && !colsHeader.length; hi++) {
+            var ht = typeof lines[hi] === 'string' ? lines[hi] : analyseRow(lines[hi]).text;
+            if (!ht) { continue; }
+            var pm = ht.search(/\bMes\b/i), po = ht.search(/\bOrigen\b/i), pa = ht.search(/\bAnterior\b/i);
+            if (pm >= 0 && po >= 0) {
+                colsHeader = [['mes', pm], ['origen', po], ['anterior', pa]].filter(function (x) { return x[1] >= 0; })
+                    .sort(function (a, b) { return a[1] - b[1]; }).map(function (x) { return x[0]; });
+            }
+        }
+        function columnasMesOrigen(n) {
+            var k = n.length, r = { mes: null, origen: null };
+            if (!k) { return r; }
+            if (colsHeader.length && k === colsHeader.length) {
+                colsHeader.forEach(function (nm, i) { if (nm === 'mes') { r.mes = n[i]; } if (nm === 'origen') { r.origen = n[i]; } });
+                return r;
+            }
+            if (k === 1) { r.origen = n[0]; return r; }   // columna Mes vacía: solo viene el origen
+            var mesAntes = !(colsHeader.length && colsHeader.indexOf('origen') < colsHeader.indexOf('mes'));
+            if (mesAntes) { r.mes = n[k - 2]; r.origen = n[k - 1]; } else { r.origen = n[k - 2]; r.mes = n[k - 1]; }
+            return r;
+        }
         for (var i = 0; i < lines.length; i++) {
             var line = typeof lines[i] === 'string' ? lines[i] : analyseRow(lines[i]).text;
             if (!line) { continue; }
@@ -1121,12 +1144,18 @@ button:disabled { opacity: .6; cursor: default; }
                 var vals = [];
                 if (mc[3] != null) { vals.push(numDec(mc[3])); }
                 if (mc[4] != null) { vals.push(numDec(mc[4])); }
+                var mn = line.match(/^Total\s+Cap[ií]tulo\s+(\d{2})(?:\s*\(.*?\))?\s*-\s*(.*?)((?:\s+-?[0-9][0-9.]*[.,][0-9]+)*)\s*$/);
+                var nums = [];
+                if (mn && mn[3]) { mn[3].trim().split(/\s+/).forEach(function (s0) { var v0 = numDec(s0); if (v0 !== null && v0 !== undefined) { nums.push(v0); } }); }
+                var cm = columnasMesOrigen(nums);
                 totalesCap[mc[1]] = {
                     codigo: mc[1],
-                    descripcion: clean(mc[2]),
+                    descripcion: clean(mn ? mn[2] : mc[2]),
                     anterior: vals.length > 1 ? vals[0] : null,
                     actual: vals.length ? vals[vals.length - 1] : null,
-                    importes: vals
+                    importes: vals,
+                    mes: cm.mes,
+                    origen: cm.origen
                 };
                 continue;
             }
@@ -2248,7 +2277,14 @@ button:disabled { opacity: .6; cursor: default; }
         var cliente = (s.ident && s.ident.cliente) || (c.ident && c.ident.cliente) || fi.cliente || '';
         var fechaAct = (s.ident && s.ident.fecha) || D.periodo || '';
 
-        var caps = ((c.capitulos || []).filter(function (x) { return x.actual !== null && x.actual !== undefined && !isNaN(x.actual); }));
+        var okN = function (v) { return v !== null && v !== undefined && !isNaN(v); };
+        var capsTodos = c.capitulos || [];
+        var nuevoFmt = capsTodos.some(function (x) { return x.origen !== undefined || x.mes !== undefined; });
+        var caps = capsTodos.map(function (x) {
+            return { codigo: x.codigo, descripcion: x.descripcion, origen: nuevoFmt ? x.origen : x.actual, mes: nuevoFmt ? x.mes : x.actual };
+        }).filter(function (x) { return okN(x.origen) || okN(x.mes); });
+        var capsMes = caps.filter(function (x) { return okN(x.mes) && x.mes !== 0; });
+        var capsOri = caps.filter(function (x) { return okN(x.origen) && x.origen > 0; });
         var hayAnt = (ant !== null || des !== null || pen !== null);
 
         var nav = [['se-resumen', 'Resumen global'], ['se-lectura', 'Lectura rápida']];
@@ -2336,29 +2372,30 @@ button:disabled { opacity: .6; cursor: default; }
 
         /* 4 · certificación a origen */
         if (caps.length) {
-            var suma = caps.reduce(function (a, x) { return a + x.actual; }, 0);
-            var maxv = caps.reduce(function (a, x) { return Math.max(a, x.actual); }, 0) || 1;
-            var top = caps.slice().sort(function (x, y) { return y.actual - x.actual; }).slice(0, 3);
+            var sumaMes = capsMes.reduce(function (a, x) { return a + x.mes; }, 0);
+            var sumaOri = capsOri.reduce(function (a, x) { return a + x.origen; }, 0);
+            var maxv = capsOri.reduce(function (a, x) { return Math.max(a, x.origen); }, 0) || 1;
+            var top = capsOri.slice().sort(function (x, y) { return y.origen - x.origen; }).slice(0, 3);
             h += '<section class="se-sec" id="se-cert">' +
                 cab('Bloque 03', 'Certificación a origen por capítulos', 'Importes certificados por capítulo técnico',
-                    '<div class="se-tot"><span>Total certificación mostrada</span><strong>' + esc(fmtMoney(ejec !== null ? ejec : suma)) + '</strong></div>') +
-                '<div class="se-2"><div class="se-panel se-flush"><div class="se-ph"><span>Capítulos de obra</span><small>' + caps.length + ' capítulos</small></div>' +
-                '<div class="se-lista">' + caps.map(function (x, i) {
-                    var pc = suma ? (x.actual / suma) * 100 : null;
+                    '<div class="se-tot"><span>Total certificación mostrada</span><strong>' + esc(fmtMoney(ejec !== null ? ejec : sumaOri)) + '</strong></div>') +
+                '<div class="se-2"><div class="se-panel se-flush"><div class="se-ph"><span>Capítulos de obra</span><small>' + capsMes.length + ' capítulos</small></div>' +
+                (capsMes.length ? '<div class="se-lista">' + capsMes.map(function (x, i) {
+                    var pc = sumaMes ? (x.mes / sumaMes) * 100 : null;
                     return '<div class="se-row"><div class="se-row-l"><span class="se-num">' + ('0' + (i + 1)).slice(-2) + '</span>' +
                         '<div><b>' + esc(x.descripcion || '') + '</b><small>' + esc(x.codigo || '') + '</small></div></div>' +
-                        '<div class="se-row-r"><b class="se-mono">' + esc(fmtMoney(x.actual)) + '</b>' +
+                        '<div class="se-row-r"><b class="se-mono">' + esc(fmtMoney(x.mes)) + '</b>' +
                         (pc !== null ? '<span class="se-chip-ok">' + esc(fmtNum(pc, 1)) + ' %</span>' : '') + '</div></div>';
-                }).join('') + '</div>' +
-                '<div class="se-pie"><span>Total certificado por capítulos</span><b class="se-mono">' + esc(fmtMoney(suma)) + '</b></div></div>' +
+                }).join('') + '</div>' : '<div class="se-note">Sin importes en la columna Mes de esta certificación.</div>') +
+                '<div class="se-pie"><span>Total certificado en el mes</span><b class="se-mono">' + esc(fmtMoney(sumaMes)) + '</b></div></div>' +
                 '<div class="se-panel"><div class="se-ph2"><h3>Distribución de costes acumulados</h3><small>Pasa el ratón para resaltar</small></div>' +
-                '<div class="se-bars">' + caps.filter(function (x) { return x.actual > 0; }).map(function (x) {
-                    return '<div class="se-bar"><div class="se-bar-t"><span>' + esc(x.descripcion || '') + '</span><b class="se-mono">' + esc(fmtMoney(x.actual)) + '</b></div>' +
-                        '<div class="se-bar-k"><div class="se-bar-f" style="width:' + Math.max(4, (x.actual / maxv) * 100) + '%"></div></div></div>';
+                '<div class="se-bars">' + capsOri.map(function (x) {
+                    return '<div class="se-bar"><div class="se-bar-t"><span>' + esc(x.descripcion || '') + '</span><b class="se-mono">' + esc(fmtMoney(x.origen)) + '</b></div>' +
+                        '<div class="se-bar-k"><div class="se-bar-f" style="width:' + Math.max(4, (x.origen / maxv) * 100) + '%"></div></div></div>';
                 }).join('') + '</div>' +
-                '<div class="se-note">Capítulo destacado: ' + top.map(function (x, i) {
-                    return (i === 0 ? 'el de mayor repercusión es <b>' : (i === 1 ? ', seguido de <b>' : ' y <b>')) + esc(x.descripcion || '') + '</b> (' + esc(fmtMoney(x.actual)) + ')';
-                }).join('') + '.</div></div></div></section>';
+                (top.length ? '<div class="se-note">Capítulo destacado: ' + top.map(function (x, i) {
+                    return (i === 0 ? 'el de mayor repercusión es <b>' : (i === 1 ? ', seguido de <b>' : ' y <b>')) + esc(x.descripcion || '') + '</b> (' + esc(fmtMoney(x.origen)) + ')';
+                }).join('') + '.</div>' : '') + '</div></div></section>';
         }
 
         /* 5 · anticipo */
@@ -3474,7 +3511,8 @@ button:disabled { opacity: .6; cursor: default; }
                     filasC += '<tr>' +
                         '<td class="mono">' + esc(cc && cc.codigo) + '</td>' +
                         '<td>' + esc(cc && cc.descripcion) + '</td>' +
-                        '<td class="num"><input type="text" class="val-input mini" data-zona="pdf1" data-lista="capitulos" data-idx="' + j + '" data-campo="actual" value="' + esc(cc && cc.actual !== null && cc.actual !== undefined ? cc.actual : '') + '" placeholder="—"></td>' +
+                        '<td class="num"><input type="text" class="val-input mini" data-zona="pdf1" data-lista="capitulos" data-idx="' + j + '" data-campo="mes" value="' + esc(cc && cc.mes !== null && cc.mes !== undefined ? cc.mes : '') + '" placeholder="—"></td>' +
+                        '<td class="num"><input type="text" class="val-input mini" data-zona="pdf1" data-lista="capitulos" data-idx="' + j + '" data-campo="origen" value="' + esc(cc ? (cc.origen !== undefined ? (cc.origen !== null ? cc.origen : '') : (cc.actual !== null && cc.actual !== undefined ? cc.actual : '')) : '') + '" placeholder="—"></td>' +
                         '</tr>';
                 }
                 var cuerpoC = '<div class="val-grid-4">' +
@@ -3491,7 +3529,7 @@ button:disabled { opacity: .6; cursor: default; }
                     'Partidas: <strong>' + cpart.length + '</strong>' +
                     (cer._cuadre ? ' · Cuadre Origen + IVA = Total: <strong>' + esc(cer._cuadre) + '</strong>' : '') + '</div>' +
                     (filasC
-                        ? '<div class="val-tabla-scroll alto"><table class="val-tabla"><thead><tr><th>Código</th><th>Capítulo</th><th class="num">Certificado</th></tr></thead><tbody>' + filasC + '</tbody></table></div>'
+                        ? '<div class="val-tabla-scroll alto"><table class="val-tabla"><thead><tr><th>Código</th><th>Capítulo</th><th class="num">Mes</th><th class="num">Origen</th></tr></thead><tbody>' + filasC + '</tbody></table></div>'
                         : '<div class="val-aviso">No se han reconocido capítulos en la certificación. Los totales de arriba siguen siendo válidos.</div>');
                 partes.push(tarjetaCabecera('Certificación actual (PDF 1)', 'Totales y capítulos certificados en la quincena.', cuerpoC, cer, 'pdf1'));
             } catch (err) { partes.push(bloqueFallo('Certificación actual (PDF 1)', cer, err)); }
@@ -4060,7 +4098,10 @@ button:disabled { opacity: .6; cursor: default; }
             return;
         }
         if (lista) {
-            if (res[lista] && res[lista][idx]) { res[lista][idx][campo] = v; }
+            if (res[lista] && res[lista][idx]) {
+                res[lista][idx][campo] = v;
+                if (zona === 'pdf1' && lista === 'capitulos' && campo === 'origen') { res[lista][idx].actual = v; }
+            }
             recalcularZona(zona, res);
             return;
         }

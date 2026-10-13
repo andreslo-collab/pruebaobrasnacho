@@ -279,6 +279,128 @@ button:disabled { opacity: .6; cursor: default; }
   body { background: #fff; }
   .bloque, .kpi { break-inside: avoid; }
 }
+
+/* ===== pestaña Seguimiento económico (diseño de dossier) ===== */
+.se { --se-p:#1B3B4B; --se-a:#D89053; --se-ok:#047857; --se-bd:#E8DFD0; background:#FAF8F5; color:#1A2730; border:1px solid var(--se-bd); border-radius:14px; padding:20px; }
+.se * { box-sizing:border-box; }
+.se-top { height:6px; margin:-20px -20px 18px; border-radius:14px 14px 0 0; background:linear-gradient(90deg,var(--se-p),var(--se-a),var(--se-p)); }
+.se-head { display:flex; flex-wrap:wrap; gap:16px; justify-content:space-between; align-items:center; padding-bottom:18px; border-bottom:1px solid #EBE3D5; }
+.se-badge { display:inline-block; background:var(--se-p); color:#fff; font-size:10.5px; font-weight:800; letter-spacing:.08em; padding:4px 10px; border-radius:5px; }
+.se-head h1 { margin:8px 0 2px; font-size:26px; font-weight:800; color:#0F1E29; letter-spacing:-.01em; }
+.se-obra { margin:0; font-size:13.5px; color:#51606a; font-weight:500; }
+.se-head-r { display:flex; flex-wrap:wrap; gap:12px; align-items:center; background:#F6F2EB; border:1px solid #E8DFD0; padding:10px 14px; border-radius:12px; }
+.se-meta span { display:block; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:#6b7780; }
+.se-meta strong { font-size:13px; color:#0F1E29; }
+.se-btn { background:var(--se-p); color:#fff; border:0; border-radius:9px; padding:9px 14px; font-size:12px; font-weight:700; cursor:pointer; transition:background .15s, transform .15s; }
+.se-btn:hover { background:#122A36; transform:translateY(-1px); }
+.se-nav { display:flex; gap:6px; flex-wrap:wrap; padding:12px 0 4px; }
+.se-navb { background:transparent; border:0; border-radius:8px; padding:7px 12px; font-size:12.5px; font-weight:600; color:#3d4a53; cursor:pointer; transition:background .15s, color .15s; }
+.se-navb:hover { background:#F3ECE0; color:var(--se-p); }
+.se-navb.rojo { color:#b91c1c; background:#fef2f2; border:1px solid #fecaca; }
+.se-navb.rojo:hover { background:#fee2e2; }
+.se-sec { margin-top:34px; }
+.se-sh { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; gap:10px; border-bottom:1px solid var(--se-bd); padding-bottom:10px; margin-bottom:16px; }
+.se-eyebrow { font-size:10.5px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--se-a); }
+.se-eyebrow.rojo { color:#dc2626; }
+.se-sh h2 { margin:2px 0 0; font-size:21px; font-weight:800; color:#0F1E29; }
+.se-sh p { margin:2px 0 0; font-size:12px; color:#6b7780; }
+.se-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px; }
+.se-card { position:relative; overflow:hidden; background:#fff; border:1px solid var(--se-bd); border-radius:16px; padding:18px; transition:border-color .2s, box-shadow .2s, transform .2s; }
+.se-card::before { content:""; position:absolute; top:-26px; right:-26px; width:96px; height:96px; border-bottom-left-radius:100%; background:#f3f4f6; transition:transform .3s; }
+.se-card:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(26,39,48,.08); }
+.se-card:hover::before { transform:scale(1.15); }
+.se-card-in { position:relative; }
+.se-card-t { display:block; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.07em; color:#6b7780; margin-bottom:8px; }
+.se-card-v { font-size:26px; font-weight:800; color:#0F1E29; letter-spacing:-.01em; }
+.se-card-p { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:10px; padding-top:8px; border-top:1px solid #f1f5f9; font-size:11.5px; color:#6b7780; }
+.se-card-p strong { color:#334155; }
+.se-c-acc::before { background:#FEF3E2; } .se-c-acc:hover { border-color:var(--se-a); }
+.se-c-ok::before { background:#ECFDF5; } .se-c-ok:hover { border-color:#10b981; } .se-c-ok .se-card-v { color:#065f46; }
+.se-c-pri::before { background:#EEF1F3; } .se-c-pri:hover { border-color:var(--se-p); } .se-c-pri .se-card-v { color:var(--se-p); }
+.se-c-red { background:linear-gradient(135deg,#fef2f2,#ffe4e6); border:2px solid #f87171; box-shadow:0 4px 12px rgba(220,38,38,.12); }
+.se-c-red::before { display:none; }
+.se-c-red .se-card-t, .se-c-red .se-card-v { color:#b91c1c; } .se-c-red .se-card-p { border-color:#fecaca; color:#991b1b; }
+.se-chip-ok { font-size:10.5px; font-weight:700; color:#065f46; background:#d1fae5; padding:2px 8px; border-radius:6px; border:1px solid #a7f3d0; white-space:nowrap; }
+.se-panel { background:#fff; border:1px solid var(--se-bd); border-radius:16px; padding:20px; margin-top:16px; }
+.se-sec > .se-panel:first-of-type { margin-top:0; }
+.se-flush { padding:0; overflow:hidden; }
+.se-prog-h { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; margin-bottom:12px; }
+.se-prog-h h3, .se-ph2 h3 { margin:0; font-size:12.5px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:#334155; }
+.se-prog-h p, .se-ph2 small { margin:2px 0 0; font-size:11.5px; color:#6b7780; display:block; }
+.se-prog-p { text-align:right; } .se-prog-p strong { font-size:24px; font-weight:800; color:var(--se-p); display:block; } .se-prog-p span { font-size:11px; color:#6b7780; }
+.se-track { background:#EFE9DF; border:1px solid #E4DCCF; border-radius:999px; height:16px; padding:2px; overflow:hidden; }
+.se-track.se-sm { height:10px; margin-top:14px; }
+.se-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,var(--se-p),#059669); transition:width 1s ease; }
+.se-mini { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin-top:14px; }
+.se-mini > div, .se-bx { background:#FAF7F2; border:1px solid #EDE5D8; border-radius:10px; padding:10px 12px; }
+.se-mini span, .se-bx span { display:block; font-size:11px; color:#6b7780; }
+.se-mini strong, .se-bx b { display:block; font-size:15px; font-weight:800; color:#0F1E29; margin-top:2px; }
+.se-bx { background:#fff; border-color:#E2D6C5; } .se-bx.ok { background:#ecfdf5; border-color:#a7f3d0; } .se-bx.ok b { color:#064e3b; }
+.se-bx small { display:block; font-size:11px; color:#6b7780; margin-top:2px; }
+.se b.amb, .se strong.amb { color:#92400e; } .se b.pr { color:var(--se-p); } .se b.ok { color:#065f46; } .se b.rj { color:#b91c1c; }
+.se-3 { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; }
+.se-lect > .se-sh { margin-top:0; }
+.se-q { background:#F8F5EE; border:1px solid #E8DFC9; border-radius:12px; padding:16px; transition:transform .2s, box-shadow .2s; }
+.se-q:hover { transform:translateY(-2px); box-shadow:0 6px 16px rgba(26,39,48,.07); }
+.se-q.rojo { background:#fef2f2; border-color:#fecaca; }
+.se-q-t { font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.07em; color:var(--se-a); }
+.se-q.rojo .se-q-t { color:#dc2626; }
+.se-q p { margin:8px 0; font-size:13.5px; font-weight:600; color:#0F1E29; line-height:1.4; }
+.se-q small { font-size:11px; color:#6b7780; }
+.se-note { margin-top:14px; padding:12px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; font-size:11.5px; color:#51606a; line-height:1.5; }
+.se-scroll { overflow-x:auto; }
+.se-tab { width:100%; border-collapse:collapse; font-size:12.5px; }
+.se-tab th { background:var(--se-p); color:#fff; font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; padding:12px; text-align:left; }
+.se-tab td { padding:12px; border-bottom:1px solid #F0E8DC; color:#334155; }
+.se-tab tbody tr:hover { background:#FAF6EE; }
+.se-tab tfoot td { background:#F4ECE0; border-top:2px solid #D8CABE; font-size:12px; color:#1A2730; }
+.se-tab .r { text-align:right; } .se-tab .c { text-align:center; }
+.se-mono { font-variant-numeric:tabular-nums; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.se-tot { text-align:right; } .se-tot span { display:block; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.07em; color:#6b7780; } .se-tot strong { font-size:21px; font-weight:800; color:#065f46; }
+.se-2 { display:grid; grid-template-columns:minmax(0,7fr) minmax(0,5fr); gap:16px; align-items:start; }
+.se-2 > .se-panel { margin-top:0; }
+.se-ph { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:#F8F5EE; border-bottom:1px solid #E8DFC9; }
+.se-ph span { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.07em; color:#334155; } .se-ph small { font-size:11px; color:#6b7780; }
+.se-lista { max-height:520px; overflow-y:auto; }
+.se-row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:11px 16px; border-bottom:1px solid #F0E8DC; font-size:12.5px; transition:background .15s; }
+.se-row:hover { background:#FAF6EE; }
+.se-row-l { display:flex; align-items:center; gap:10px; min-width:0; }
+.se-row-l > div { min-width:0; } .se-row-l b { display:block; color:#1e293b; } .se-row-l small { font-size:10.5px; color:#6b7780; }
+.se-num { flex:0 0 auto; width:24px; height:24px; border-radius:6px; background:#f1f5f9; color:#64748b; font-size:10px; font-weight:800; display:flex; align-items:center; justify-content:center; font-family:ui-monospace,Menlo,Consolas,monospace; }
+.se-row-r { text-align:right; flex:0 0 auto; } .se-row-r b { display:block; color:#0F1E29; }
+.se-pie { display:flex; justify-content:space-between; padding:13px 16px; background:#FAF7F2; border-top:1px solid var(--se-bd); font-size:12px; font-weight:800; color:#1e293b; }
+.se-ph2 { margin-bottom:12px; }
+.se-bars { display:flex; flex-direction:column; gap:6px; }
+.se-bar { padding:6px; border-radius:9px; transition:background .15s, box-shadow .15s; }
+.se-bar:hover { background:#fffbeb; box-shadow:inset 0 0 0 1px #fcd34d; }
+.se-bar-t { display:flex; justify-content:space-between; gap:10px; font-size:11.5px; font-weight:600; color:#334155; margin-bottom:4px; }
+.se-bar-t span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.se-bar-k { background:#EFE9DF; height:8px; border-radius:999px; overflow:hidden; }
+.se-bar-f { height:100%; border-radius:999px; background:var(--se-p); transition:background .2s, width .5s; }
+.se-bar:hover .se-bar-f { background:var(--se-a); }
+.se-tag { display:inline-block; font-size:11.5px; font-weight:700; background:#FEF3C7; color:#78350f; border:1px solid #fde68a; padding:4px 10px; border-radius:8px; }
+.se-tag.ok { background:#d1fae5; color:#065f46; border-color:#a7f3d0; } .se-tag.warn { background:#fee2e2; color:#991b1b; border-color:#fecaca; }
+.se-ant { border:2px solid rgba(216,144,83,.4); }
+.se-label { font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:#6b7780; margin-bottom:10px; }
+.se-step { background:#FAF8F5; border:1px solid var(--se-bd); border-radius:12px; padding:14px; }
+.se-step i { display:flex; width:26px; height:26px; border-radius:50%; background:var(--se-p); color:#fff; font-style:normal; font-size:12px; font-weight:800; align-items:center; justify-content:center; margin-bottom:8px; }
+.se-step.acc i { background:var(--se-a); }
+.se-step b { display:block; font-size:13px; color:#0F1E29; margin-bottom:3px; } .se-step p { margin:0; font-size:12px; color:#51606a; }
+.se-estado { margin-top:18px; background:#F8F5EE; border:1px solid #E8DFC9; border-radius:12px; padding:16px; }
+.se-hint { display:block; margin-top:6px; font-size:11px; color:#6b7780; }
+.se-form { margin:12px 0 0; font-size:13px; font-weight:700; color:#334155; }
+.se-red { background:linear-gradient(135deg,#ef4444,#dc2626); color:#fff; border:4px solid rgba(185,28,28,.3); border-radius:16px; padding:24px; box-shadow:0 10px 24px rgba(220,38,38,.25); }
+.se-red-h { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:14px; padding-bottom:14px; border-bottom:1px solid rgba(255,255,255,.25); }
+.se-red-h span { font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.12em; color:#fee2e2; }
+.se-red-h h3 { margin:4px 0 0; font-size:20px; font-weight:800; }
+.se-red-v { font-size:36px; font-weight:800; letter-spacing:-.01em; }
+.se-red p { margin:14px 0 0; font-size:13.5px; line-height:1.55; color:#fee2e2; max-width:760px; }
+.se-2b { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; margin-top:14px; }
+.se-2b .se-panel { margin-top:0; }
+.se-sc span { display:block; font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.07em; color:#6b7780; }
+.se-sc b { display:block; font-size:21px; font-weight:800; color:#0F1E29; margin:4px 0; } .se-sc small { font-size:11.5px; color:#6b7780; }
+@media (max-width:900px) { .se-2 { grid-template-columns:1fr; } .se-head h1 { font-size:21px; } .se-red-v { font-size:28px; } }
+@media print { .se-noprint { display:none !important; } .se { border:0; padding:0; background:#fff; } .se-card:hover, .se-q:hover { transform:none; box-shadow:none; } .se-lista { max-height:none; } .se-panel, .se-card, .se-red { break-inside:avoid; } }
 /*__CSS_FIN__*/
 </style>
 </head>
@@ -2090,35 +2212,219 @@ button:disabled { opacity: .6; cursor: default; }
     function tabSeguimiento(D) {
         var s = D.seguimiento;
         if (!s) { return sinDatos('Ficha de seguimiento no disponible', 'Carga el PDF 3 (ficha de seguimiento económico).'); }
-        var k = function (id, et) {
-            var o = s.kpis ? s.kpis[id] : null;
-            return kpi(et, o && o.valor !== undefined && o.valor !== null ? fmtMoney(o.valor) : '—',
-                o && o.textoFuente ? 'leído de: ' + String(o.textoFuente).slice(0, 46) : null,
-                id === 'totalSaldoFavorEnue' ? 'k-dark' : '');
+        var Q = String.fromCharCode(39);
+        var kp = s.kpis || {};
+        var val = function (id) {
+            var o = kp[id];
+            return (o && o.valor !== undefined && o.valor !== null && !isNaN(o.valor)) ? o.valor : null;
         };
-        var html = '<div class="kpis">' +
-            k('presupuestoObraAprox', 'Presupuesto obra aprox.') +
-            k('pendienteCertificar', 'Pendiente de certificar') +
-            k('pendienteFacturar', 'Pendiente de facturar') +
-            k('totalSaldoFavorEnue', 'Saldo a favor de ENUE') +
-            '</div><div class="kpis">' +
-            k('anticipoInicial', 'Anticipo inicial') +
-            k('descontado', 'Descontado') +
-            k('anticipoPendiente', 'Pendiente de anticipo') +
-            k('facturasEmitidas', 'Facturas emitidas') +
-            '</div>';
+        var c = D.certificacion || {}, ct = c.totales || {};
+        var f = D.factura || null, ft = (f && f.totales) || {};
+        var fi = (f && f.ident) || {};
+        var presu = val('presupuestoObraAprox');
+        if (presu === null && D.presupuesto && D.presupuesto.totales && D.presupuesto.totales.pem) { presu = D.presupuesto.totales.pem; }
+        var ejec = (ct.origen !== undefined && ct.origen !== null && !isNaN(ct.origen)) ? ct.origen : null;
+        var pctAv = (presu && ejec !== null) ? (ejec / presu) * 100 : null;
+        var pendCert = val('pendienteCertificar'), pendFact = val('pendienteFacturar');
+        var saldo = val('totalSaldoFavorEnue'), emit = val('facturasEmitidas'), pagos = val('pagosRecibidos');
+        var ant = val('anticipoInicial'), des = val('descontado'), pen = val('anticipoPendiente');
+        var ivaP = (ft.ivaPct !== undefined && ft.ivaPct !== null) ? ft.ivaPct : ((ct.ivaPct !== undefined && ct.ivaPct !== null) ? ct.ivaPct : null);
+        var conIva = function (v) { return (v === null || ivaP === null) ? null : v * (1 + ivaP / 100); };
+        var pieIva = function (v) {
+            var x = conIva(v);
+            return x === null ? '' : '<span>Con IVA (' + fmtNum(ivaP, ivaP % 1 === 0 ? 0 : 2) + ' %):</span><strong>' + fmtMoney(x) + '</strong>';
+        };
+        var cab = function (bloque, titulo, desc, der, rojo) {
+            return '<div class="se-sh"><div><span class="se-eyebrow' + (rojo ? ' rojo' : '') + '">' + esc(bloque) + '</span><h2>' + esc(titulo) + '</h2>' +
+                (desc ? '<p>' + esc(desc) + '</p>' : '') + '</div>' + (der || '') + '</div>';
+        };
+        var card = function (tit, valor, mod, pie) {
+            return '<div class="se-card ' + mod + '"><div class="se-card-in"><span class="se-card-t">' + esc(tit) + '</span>' +
+                '<div class="se-card-v">' + esc(valor) + '</div>' + (pie ? '<div class="se-card-p">' + pie + '</div>' : '') + '</div></div>';
+        };
+        var mon = function (v) { return v === null ? '—' : fmtMoney(v); };
 
-        var ant = s.kpis && s.kpis.anticipoInicial ? s.kpis.anticipoInicial.valor : null;
-        var des = s.kpis && s.kpis.descontado ? s.kpis.descontado.valor : null;
-        var pen = s.kpis && s.kpis.anticipoPendiente ? s.kpis.anticipoPendiente.valor : null;
-        if (ant !== null && des !== null && pen !== null) {
-            var cuadra = Math.abs((ant - des) - pen) < 0.05;
-            html += '<div class="bloque">' + filaCabecera('Conciliación del anticipo',
-                'Anticipo inicial − descontado = pendiente de amortizar.',
-                '') .replace('</div>', '<span class="chip ' + (cuadra ? 'ok' : 'warn') + '">' + (cuadra ? 'Cuadra' : 'Revisar') + '</span></div>') +
-                '<p class="formula">' + fmtMoney(ant) + ' − ' + fmtMoney(des) + ' = ' + fmtMoney(pen) + '</p></div>';
+        var obraNom = (s.ident && s.ident.obra) || D.identificador || '';
+        var cliente = (s.ident && s.ident.cliente) || (c.ident && c.ident.cliente) || fi.cliente || '';
+        var fechaAct = (s.ident && s.ident.fecha) || D.periodo || '';
+
+        var caps = ((c.capitulos || []).filter(function (x) { return x.actual !== null && x.actual !== undefined && !isNaN(x.actual); }));
+        var hayAnt = (ant !== null || des !== null || pen !== null);
+
+        var nav = [['se-resumen', 'Resumen global'], ['se-lectura', 'Lectura rápida']];
+        if (f) { nav.push(['se-facturas', 'Factura y cobros']); }
+        if (caps.length) { nav.push(['se-cert', 'Certificación a origen']); }
+        if (hayAnt) { nav.push(['se-anticipo', 'Anticipo']); }
+        if (saldo !== null) { nav.push(['se-saldo', 'Saldo a favor de ENUE']); }
+
+        var h = '<div class="se"><div class="se-top"></div>';
+
+        /* cabecera */
+        h += '<div class="se-head"><div class="se-head-l">' +
+            '<span class="se-badge">ENUE PROYECTOS Y CONSTRUCCIÓN S.L.</span>' +
+            '<h1>Seguimiento económico de la obra</h1>' +
+            (obraNom ? '<p class="se-obra">' + esc(obraNom) + '</p>' : '') + '</div>' +
+            '<div class="se-head-r">' +
+            (cliente ? '<div class="se-meta"><span>Cliente</span><strong>' + esc(cliente) + '</strong></div>' : '') +
+            (fechaAct ? '<div class="se-meta"><span>Actualización</span><strong>' + esc(fechaAct) + '</strong></div>' : '') +
+            '<button class="se-btn se-noprint" onclick="window.print()">Imprimir / PDF</button></div></div>';
+
+        /* navegación interna */
+        h += '<div class="se-nav se-noprint">' + nav.map(function (n) {
+            return '<button class="se-navb' + (n[0] === 'se-saldo' ? ' rojo' : '') + '" onclick="var e=document.getElementById(' + Q + n[0] + Q + ');if(e){e.scrollIntoView({behavior:' + Q + 'smooth' + Q + ',block:' + Q + 'start' + Q + '});}">' + esc(n[1]) + '</button>';
+        }).join('') + '</div>';
+
+        /* 1 · resumen */
+        h += '<section class="se-sec" id="se-resumen">' +
+            cab('Bloque 01', 'Resumen económico general', 'Cifras leídas de la ficha de seguimiento y de la certificación cargadas') +
+            '<div class="se-grid">' +
+            card('Presupuesto obra aprox.', mon(presu), 'se-c-acc', pieIva(presu)) +
+            card('Obra ejecutada a origen', mon(ejec), 'se-c-ok',
+                '<span>Según certificación a origen</span>' + (pctAv !== null ? '<strong class="se-chip-ok">~' + fmtNum(pctAv, 2) + ' %</strong>' : '')) +
+            card('Facturación emitida', mon(emit), 'se-c-pri', pagos !== null ? '<span>Pagos recibidos:</span><strong>' + fmtMoney(pagos) + '</strong>' : '') +
+            card('Pendiente de certificar', mon(pendCert), '', pieIva(pendCert)) +
+            card('Pendiente de facturar', mon(pendFact), '', pieIva(pendFact)) +
+            (saldo !== null ? '<div class="se-card se-c-red"><div class="se-card-in"><span class="se-card-t">Saldo actual a favor de ENUE</span>' +
+                '<div class="se-card-v">' + esc(fmtMoney(saldo)) + '</div>' +
+                '<div class="se-card-p"><span>' + (fi.numero ? 'Factura ' + esc(fi.numero) : 'Según ficha de seguimiento') + '</span></div></div></div>' : '') +
+            '</div>';
+        if (pctAv !== null) {
+            h += '<div class="se-panel"><div class="se-prog-h"><div><h3>Progreso global de ejecución presupuestaria</h3>' +
+                '<p>Obra ejecutada frente al presupuesto estimado de la reforma</p></div>' +
+                '<div class="se-prog-p"><strong>~' + fmtNum(pctAv, 2) + ' %</strong><span>calculado aprox.</span></div></div>' +
+                '<div class="se-track"><div class="se-fill" style="width:' + Math.max(0, Math.min(100, pctAv)) + '%"></div></div>' +
+                '<div class="se-mini">' +
+                '<div><span>Ejecutado a origen</span><strong>' + fmtMoney(ejec) + '</strong></div>' +
+                '<div><span>Presupuesto aprox.</span><strong>' + fmtMoney(presu) + '</strong></div>' +
+                '<div><span>Resta por ejecutar</span><strong class="amb">' + (pendCert !== null ? fmtMoney(pendCert) : fmtMoney(presu - ejec)) + '</strong></div>' +
+                '</div></div>';
         }
-        return html;
+        h += '</section>';
+
+        /* 2 · lectura rápida */
+        var capsTxt = caps.length ? 'Desglosada en ' + caps.length + ' capítulos en el cuadro de certificación.' : 'Sin desglose por capítulos disponible.';
+        h += '<section class="se-sec se-panel se-lect" id="se-lectura">' +
+            cab('Lectura rápida', 'Puntos clave del estado económico actual', fechaAct ? 'Situación a ' + fechaAct : '') +
+            '<div class="se-3">' +
+            '<div class="se-q"><span class="se-q-t">Hito 1 · Obra ejecutada</span><p>' +
+                (ejec !== null ? 'La obra certificada alcanza <b class="ok">' + esc(fmtMoney(ejec)) + '</b>.' : 'No se ha podido leer la obra certificada.') + '</p><small>' + esc(capsTxt) + '</small></div>' +
+            '<div class="se-q rojo"><span class="se-q-t">Hito 2 · Saldo pendiente</span><p>' +
+                (saldo !== null ? 'El saldo a favor de ENUE es <b class="rj">' + esc(fmtMoney(saldo)) + '</b>' + (fi.numero ? ' (factura ' + esc(fi.numero) + ').' : '.') : 'No se ha podido leer el saldo.') + '</p>' +
+                '<small>Según la ficha de seguimiento económico.</small></div>' +
+            '<div class="se-q"><span class="se-q-t">Hito 3 · Margen restante</span><p>' +
+                (pendCert !== null ? 'Queda pendiente de certificar <b class="pr">' + esc(fmtMoney(pendCert)) + '</b>' + (conIva(pendCert) !== null ? ' (con IVA: ' + esc(fmtMoney(conIva(pendCert))) + ').' : '.') : 'No se ha podido leer lo pendiente de certificar.') + '</p>' +
+                '<small>Permite planificar las siguientes fases con visibilidad del presupuesto.</small></div>' +
+            '</div>' +
+            '<div class="se-note">Criterio de transparencia: las cifras se leen de los documentos cargados sin recalcularlas; solo los porcentajes y los importes con IVA se calculan a partir de ellas.</div>' +
+            '</section>';
+
+        /* 3 · factura */
+        if (f) {
+            h += '<section class="se-sec" id="se-facturas">' +
+                cab('Bloque 02', 'Factura y cobros', 'Última factura cargada y acumulados de la ficha de seguimiento') +
+                '<div class="se-panel se-flush"><div class="se-scroll"><table class="se-tab"><thead><tr>' +
+                '<th>Fecha</th><th class="c">Nº factura</th><th class="r">Base imponible</th><th class="r">IVA' + (ft.ivaPct !== undefined && ft.ivaPct !== null ? ' (' + esc(fmtNum(ft.ivaPct, 0)) + ' %)' : '') + '</th><th class="r">Total factura</th></tr></thead><tbody>' +
+                '<tr><td>' + esc(fi.fecha || '—') + '</td><td class="c"><span class="se-mono">' + esc(fi.numero || '—') + '</span></td>' +
+                '<td class="r se-mono">' + esc(mon(ft.base !== undefined ? ft.base : null)) + '</td><td class="r se-mono">' + esc(mon(ft.iva !== undefined ? ft.iva : null)) + '</td>' +
+                '<td class="r se-mono"><b>' + esc(mon(ft.total !== undefined ? ft.total : null)) + '</b></td></tr></tbody>' +
+                ((emit !== null || pagos !== null) ? '<tfoot><tr><td colspan="5">' +
+                    (emit !== null ? 'Facturas emitidas (acumulado): <b>' + esc(fmtMoney(emit)) + '</b>' : '') +
+                    (emit !== null && pagos !== null ? ' &nbsp;·&nbsp; ' : '') +
+                    (pagos !== null ? 'Pagos recibidos: <b>' + esc(fmtMoney(pagos)) + '</b>' : '') + '</td></tr></tfoot>' : '') +
+                '</table></div></div></section>';
+        }
+
+        /* 4 · certificación a origen */
+        if (caps.length) {
+            var suma = caps.reduce(function (a, x) { return a + x.actual; }, 0);
+            var maxv = caps.reduce(function (a, x) { return Math.max(a, x.actual); }, 0) || 1;
+            var top = caps.slice().sort(function (x, y) { return y.actual - x.actual; }).slice(0, 3);
+            h += '<section class="se-sec" id="se-cert">' +
+                cab('Bloque 03', 'Certificación a origen por capítulos', 'Importes certificados por capítulo técnico',
+                    '<div class="se-tot"><span>Total certificación mostrada</span><strong>' + esc(fmtMoney(ejec !== null ? ejec : suma)) + '</strong></div>') +
+                '<div class="se-2"><div class="se-panel se-flush"><div class="se-ph"><span>Capítulos de obra</span><small>' + caps.length + ' capítulos</small></div>' +
+                '<div class="se-lista">' + caps.map(function (x, i) {
+                    var pc = suma ? (x.actual / suma) * 100 : null;
+                    return '<div class="se-row"><div class="se-row-l"><span class="se-num">' + ('0' + (i + 1)).slice(-2) + '</span>' +
+                        '<div><b>' + esc(x.descripcion || '') + '</b><small>' + esc(x.codigo || '') + '</small></div></div>' +
+                        '<div class="se-row-r"><b class="se-mono">' + esc(fmtMoney(x.actual)) + '</b>' +
+                        (pc !== null ? '<span class="se-chip-ok">' + esc(fmtNum(pc, 1)) + ' %</span>' : '') + '</div></div>';
+                }).join('') + '</div>' +
+                '<div class="se-pie"><span>Total certificado por capítulos</span><b class="se-mono">' + esc(fmtMoney(suma)) + '</b></div></div>' +
+                '<div class="se-panel"><div class="se-ph2"><h3>Distribución de costes acumulados</h3><small>Pasa el ratón para resaltar</small></div>' +
+                '<div class="se-bars">' + caps.filter(function (x) { return x.actual > 0; }).map(function (x) {
+                    return '<div class="se-bar"><div class="se-bar-t"><span>' + esc(x.descripcion || '') + '</span><b class="se-mono">' + esc(fmtMoney(x.actual)) + '</b></div>' +
+                        '<div class="se-bar-k"><div class="se-bar-f" style="width:' + Math.max(4, (x.actual / maxv) * 100) + '%"></div></div></div>';
+                }).join('') + '</div>' +
+                '<div class="se-note">Capítulo destacado: ' + top.map(function (x, i) {
+                    return (i === 0 ? 'el de mayor repercusión es <b>' : (i === 1 ? ', seguido de <b>' : ' y <b>')) + esc(x.descripcion || '') + '</b> (' + esc(fmtMoney(x.actual)) + ')';
+                }).join('') + '.</div></div></div></section>';
+        }
+
+        /* 5 · anticipo */
+        if (hayAnt) {
+            var pctAnt = (ant !== null && presu) ? (ant / presu) * 100 : null;
+            var pctAmort = (ant && des !== null) ? (des / ant) * 100 : null;
+            h += '<section class="se-sec" id="se-anticipo">' +
+                cab('Bloque 04', 'Anticipo / previsión de fondos', 'Estado del anticipo y su regularización en certificaciones',
+                    pctAnt !== null ? '<span class="se-tag">Anticipo ≈ ' + esc(fmtNum(pctAnt, 1)) + ' % del presupuesto</span>' : '') +
+                '<div class="se-panel se-ant">' +
+                '<div class="se-label">Diagrama operativo de regularización</div>' +
+                '<div class="se-3">' +
+                '<div class="se-step"><i>1</i><b>Firma y aceptación</b><p>Formalización del presupuesto y de la previsión de fondos de obra.</p></div>' +
+                '<div class="se-step"><i>2</i><b>Abono inicial</b><p>' + (ant !== null ? 'Anticipo abonado: <strong>' + esc(fmtMoney(ant)) + '</strong>.' : 'Importe no disponible.') + '</p></div>' +
+                '<div class="se-step acc"><i>3</i><b>Regularización</b><p>' + (des !== null ? 'Regularizado hasta ahora: <strong>' + esc(fmtMoney(des)) + '</strong>.' : 'Importe no disponible.') + '</p></div>' +
+                '</div>' +
+                '<div class="se-estado"><div class="se-label">Estado numérico del anticipo</div><div class="se-3">' +
+                '<div class="se-bx"><span>Anticipo inicial abonado</span><b>' + esc(mon(ant)) + '</b>' + (conIva(ant) !== null ? '<small>Con IVA: ' + esc(fmtMoney(conIva(ant))) + '</small>' : '') + '</div>' +
+                '<div class="se-bx"><span>Descontado / regularizado</span><b class="amb">' + esc(mon(des)) + '</b>' + (conIva(des) !== null ? '<small>Con IVA: ' + esc(fmtMoney(conIva(des))) + '</small>' : '') + '</div>' +
+                '<div class="se-bx"><span>Pendiente de regularizar</span><b class="pr">' + esc(mon(pen)) + '</b>' + (conIva(pen) !== null ? '<small>Con IVA: ' + esc(fmtMoney(conIva(pen))) + '</small>' : '') + '</div>' +
+                '</div>';
+            if (pctAmort !== null) {
+                h += '<div class="se-track se-sm"><div class="se-fill" style="width:' + Math.max(0, Math.min(100, pctAmort)) + '%"></div></div>' +
+                    '<small class="se-hint">Regularizado: ' + esc(fmtNum(pctAmort, 1)) + ' % del anticipo inicial.</small>';
+            }
+            if (ant !== null && des !== null && pen !== null) {
+                var cuadra = Math.abs((ant - des) - pen) < 0.05;
+                h += '<p class="se-form">' + esc(fmtMoney(ant)) + ' − ' + esc(fmtMoney(des)) + ' = ' + esc(fmtMoney(pen)) +
+                    ' <span class="se-tag ' + (cuadra ? 'ok' : 'warn') + '">' + (cuadra ? 'Cuadra' : 'Revisar') + '</span></p>';
+            }
+            h += '</div></div></section>';
+        }
+
+        /* 6 · saldo */
+        if (saldo !== null) {
+            var igual = (ft.total !== undefined && ft.total !== null) && Math.abs(ft.total - saldo) < 0.05;
+            var txtSaldo = '';
+            if (f && ft.total !== undefined && ft.total !== null) {
+                txtSaldo = igual ? 'Coincide con el total de la factura ' + (fi.numero ? esc(fi.numero) + ' ' : '') + (fi.fecha ? 'de fecha <strong>' + esc(fi.fecha) + '</strong>' : '') : 'Última factura cargada: ' + (fi.numero ? esc(fi.numero) + ' ' : '') + 'por ' + esc(fmtMoney(ft.total));
+                if (ft.base !== undefined && ft.base !== null && ft.iva !== undefined && ft.iva !== null) {
+                    txtSaldo += ', compuesta por ' + esc(fmtMoney(ft.base)) + ' de base imponible más ' + esc(fmtMoney(ft.iva)) + ' de IVA';
+                }
+                txtSaldo += '.';
+            } else { txtSaldo = 'Importe leído de la ficha de seguimiento económico.'; }
+            h += '<section class="se-sec" id="se-saldo">' +
+                cab('Bloque 05', 'Estado de liquidación y saldo pendiente', 'Importe pendiente de regularización correspondiente al hito actual', '', true) +
+                '<div class="se-red"><div class="se-red-h"><div><span>Posición acreedora actual</span><h3>TOTAL SALDO A FAVOR DE ENUE</h3></div>' +
+                '<div class="se-red-v">' + esc(fmtMoney(saldo)) + '</div></div><p>' + txtSaldo + '</p></div>' +
+                '<div class="se-2b">' +
+                '<div class="se-panel se-sc"><div><span>Pendiente de certificar</span><b>' + esc(mon(pendCert)) + '</b>' + (conIva(pendCert) !== null ? '<small>Con IVA: ' + esc(fmtMoney(conIva(pendCert))) + '</small>' : '') + '</div></div>' +
+                '<div class="se-panel se-sc"><div><span>Pendiente de facturar</span><b>' + esc(mon(pendFact)) + '</b>' + (conIva(pendFact) !== null ? '<small>Con IVA: ' + esc(fmtMoney(conIva(pendFact))) + '</small>' : '') + '</div></div>' +
+                '</div></section>';
+        }
+
+        /* 7 · conciliación */
+        if (ejec !== null) {
+            var per = (ct.actual !== undefined && ct.actual !== null && !isNaN(ct.actual)) ? ct.actual : null;
+            var prev = per !== null ? ejec - per : null;
+            h += '<section class="se-sec se-panel">' +
+                '<div class="se-ph2"><h3>Detalle de la obra ejecutada y conciliación</h3><small>Avance respecto al origen anterior y periodo corriente</small></div>' +
+                '<div class="se-3"><div class="se-bx"><span>Origen anterior acumulado</span><b>' + esc(mon(prev)) + '</b><small>' + (prev !== null ? 'Total a origen menos certificación del periodo' : 'No disponible') + '</small></div>' +
+                '<div class="se-bx"><span>Certificación del periodo</span><b class="pr">' + esc(mon(per)) + '</b><small>Ejecutado en el último periodo</small></div>' +
+                '<div class="se-bx ok"><span>Total obra ejecutada a origen</span><b>' + esc(fmtMoney(ejec)) + '</b><small>Total a origen de la certificación</small></div></div></section>';
+        }
+
+        return h + '</div>';
     }
 
     function tabFacturacion(D) {

@@ -314,7 +314,7 @@ button:focus-visible, .tab:focus-visible, summary:focus-visible { outline: 2px s
     .bloque, .kpi { break-inside: avoid; }
 }
 
-/*__CSS_FIN__*/
+
 
 /* ---- refinamiento corporativo ---- */
 body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; font-size: 14px; line-height: 1.45; }
@@ -337,6 +337,91 @@ body { font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; font-size: 
 .dash-cabecera { background: #1B2128; border-bottom: 2px solid #5B7A94; }
 .dash-cabecera h1 { font-weight: 600; }
 .dash-chip { color: #A9BBCB; }
+
+/* ---- interacción y acento verde vivo ---- */
+:root {
+    --neon: #00E55B;
+    --neon-2: #00FF66;
+    --neon-glow: rgba(0,255,102,.45);
+    --neon-suave: rgba(0,229,91,.10);
+    --ease: cubic-bezier(.22,.8,.26,1);
+}
+::selection { background: var(--neon); color: #000; }
+html { scroll-behavior: smooth; }
+.cabecera { border-bottom: 2px solid var(--neon); box-shadow: 0 1px 14px -4px var(--neon-glow); }
+.marca { transition: transform .25s var(--ease); }
+.marca:hover { transform: translateX(3px); }
+.marca .logo { border-color: var(--neon); color: var(--neon); transition: background .25s, color .25s, box-shadow .25s; }
+.marca:hover .logo { background: var(--neon); color: #000; box-shadow: 0 0 16px var(--neon-glow); }
+.cab-estado::before, .chip-lector::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--neon); margin-right: 8px; box-shadow: 0 0 8px var(--neon); animation: latido 2s ease-in-out infinite; vertical-align: 1px; }
+@keyframes latido { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.7); } }
+.btn-primario, .btn-sec, .btn-mini, .zona-btn, .zona-texto { position: relative; transition: background .2s var(--ease), color .2s var(--ease), border-color .2s var(--ease), transform .2s var(--ease), box-shadow .25s var(--ease); }
+.btn-primario:hover:not(:disabled), .zona-btn:hover { background: var(--neon); border-color: var(--neon); color: #000; transform: translateY(-2px); box-shadow: 0 6px 20px -4px var(--neon-glow), 0 0 0 1px var(--neon); }
+.btn-sec:hover:not(:disabled) { background: #000; color: var(--neon); border-color: var(--neon); transform: translateY(-2px); box-shadow: 0 6px 18px -6px var(--neon-glow); }
+.btn-mini:hover:not(:disabled) { background: var(--neon); color: #000; transform: translateY(-1px); }
+.zona-texto:hover { border-color: var(--neon); color: #000; background: var(--neon-suave); transform: translateY(-1px); }
+.btn-primario:active:not(:disabled), .btn-sec:active:not(:disabled), .btn-mini:active:not(:disabled), .zona-btn:active { transform: translateY(0) scale(.97); box-shadow: none; }
+.btn-primario.grande:not(:disabled) { animation: pulso 2.8s ease-in-out infinite; }
+.btn-primario.grande:hover:not(:disabled) { animation: none; }
+@keyframes pulso { 0%,100% { box-shadow: 0 0 0 0 rgba(0,255,102,0); } 50% { box-shadow: 0 0 0 6px rgba(0,255,102,.18); } }
+.dash-cabecera .btn-primario { background: var(--neon); border-color: var(--neon); color: #000; }
+.dash-cabecera .btn-primario:hover:not(:disabled) { background: #fff; border-color: #fff; color: #000; box-shadow: 0 6px 20px -4px var(--neon-glow); }
+.dash-cabecera .btn-sec:hover:not(:disabled) { background: transparent; color: var(--neon); border-color: var(--neon); }
+.tab { position: relative; border-bottom-color: transparent !important; transition: color .2s, background .2s; }
+.tab::after { content: ''; position: absolute; left: 50%; right: 50%; bottom: -1px; height: 3px; background: var(--neon); box-shadow: 0 0 10px var(--neon-glow); transition: left .3s var(--ease), right .3s var(--ease); }
+.tab:hover { background: var(--neon-suave); color: #000; }
+.tab:hover::after { left: 24%; right: 24%; }
+.tab.activa { color: #000; }
+.tab.activa::after { left: 0; right: 0; }
+.kpi, .fase-card, .plano-card, .opciones-col, .compartir-card, .detectado-item { transition: transform .25s var(--ease), box-shadow .25s var(--ease), border-color .25s var(--ease), background .25s var(--ease); }
+.kpi:hover, .fase-card:hover, .plano-card:hover, .compartir-card:hover { transform: translateY(-4px); border-color: var(--neon); box-shadow: 0 12px 28px -14px rgba(0,0,0,.35), 0 0 0 1px var(--neon), 0 0 22px -8px var(--neon-glow); }
+.kpi:hover { border-top-color: var(--neon); }
+.kpi.k-green .kpi-v { color: #00B843; }
+.kpi.k-dark .kpi-v { color: var(--neon); text-shadow: 0 0 18px var(--neon-glow); }
+.kpi.k-dark { border-top-color: var(--neon); }
+.fase-card.activa { border-left-color: var(--neon); box-shadow: inset 0 0 0 1px #000, 0 0 18px -8px var(--neon-glow); }
+.gen-card:hover { border-color: var(--linea-fuerte); }
+.bloque { transition: box-shadow .25s var(--ease), border-color .25s; }
+.bloque:hover { border-color: var(--linea-fuerte); box-shadow: 0 10px 30px -22px rgba(0,0,0,.4); }
+.zona { transition: background .25s, border-color .25s, transform .25s var(--ease), box-shadow .25s; }
+.zona:hover { border-color: var(--neon); background: var(--neon-suave); transform: translateY(-2px); }
+.zona.arrastrando { border-color: var(--neon); background: rgba(0,229,91,.16); box-shadow: 0 0 0 3px var(--neon-glow); }
+.zona.con-archivo { border-color: var(--neon); }
+.zona-titulo:hover { color: #00A63E; }
+.zona-id { color: #00A63E; }
+.tabla tbody tr, .val-tabla tbody tr { transition: background .15s, box-shadow .15s; }
+.tabla tbody tr:hover, .val-tabla tbody tr:hover { background: var(--neon-suave); box-shadow: inset 3px 0 0 var(--neon); }
+.barra-i { background: linear-gradient(90deg, #00B843, var(--neon-2)); transition: width .8s var(--ease); position: relative; overflow: hidden; }
+.barra-i.ambar { background: #C29A1E; } .barra-i.rojo { background: #B5402F; }
+.barra-i::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent); transform: translateX(-100%); animation: brillo 2.6s ease-in-out infinite; }
+@keyframes brillo { to { transform: translateX(100%); } }
+.pasos li.actual::before { border-color: var(--neon); background: var(--neon); box-shadow: 0 0 10px var(--neon); animation: latido 1.2s ease-in-out infinite; }
+.pasos li.hecho::before { border-color: var(--neon); background: var(--neon); }
+.val-input, textarea, input[type=text] { transition: border-color .2s, box-shadow .2s, background .2s; }
+.val-input:focus, textarea:focus, input[type=text]:focus { border-color: var(--neon) !important; box-shadow: 0 0 0 3px rgba(0,229,91,.22); outline: none; }
+button:focus-visible, .tab:focus-visible, summary:focus-visible { outline: 2px solid var(--neon); outline-offset: 2px; }
+summary { transition: color .2s; }
+summary:hover { color: #00A63E; }
+.chip, .chip-estado { transition: transform .2s var(--ease), background .2s, border-color .2s; }
+.chip:hover, .chip-estado:hover { transform: translateY(-1px); border-color: var(--neon); }
+.compartir-aviso.ok, .ok-enlace { border-color: var(--neon); }
+.dash-enlace code:hover, .enlace-area:hover { border-color: var(--neon); }
+.dash-chip { color: var(--neon); }
+@keyframes sube { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.dash-cabecera, .gen-hero, .gen-card, .kpi, .bloque { animation: sube .5s var(--ease) both; }
+.kpis .kpi:nth-child(2) { animation-delay: .05s; } .kpis .kpi:nth-child(3) { animation-delay: .1s; }
+.kpis .kpi:nth-child(4) { animation-delay: .15s; } .kpis .kpi:nth-child(5) { animation-delay: .2s; }
+.kpis .kpi:nth-child(n+6) { animation-delay: .25s; }
+.dash-cuerpo > .bloque:nth-child(2) { animation-delay: .08s; } .dash-cuerpo > .bloque:nth-child(3) { animation-delay: .14s; }
+.dash-cuerpo > .bloque:nth-child(n+4) { animation-delay: .2s; }
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+@media print {
+    *, *::before, *::after { animation: none !important; transition: none !important; box-shadow: none !important; text-shadow: none !important; }
+    .barra-i::after, .cab-estado::before, .chip-lector::before { display: none !important; }
+}
+/*__CSS_FIN__*/
 </style>
 </head>
 <body>

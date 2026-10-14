@@ -473,6 +473,16 @@ button:disabled { opacity: .6; cursor: default; }
 .rosco-det { font-size: 12px; color: #43474d; margin-top: 4px; }
 .rosco-sub { font-size: 11px; color: #8d9298; }
 @media print { .rosco-card { break-inside: avoid; box-shadow: none; transform: none; } }
+
+/* ===== sin burbuja en tarjetas; saldo con solo el número en verde ===== */
+.se-card::before { display: none !important; }
+.se-card.se-c-red { background: #fff; border: 1px solid var(--se-bd); box-shadow: none; }
+.se-card.se-c-red:hover { border-color: #059669; box-shadow: 0 8px 20px rgba(22,24,26,.08); }
+.se-card.se-c-red .se-card-t { color: #6E737A; }
+.se-card.se-c-red .se-card-v { color: #059669; }
+.se-card.se-c-red .se-card-p { border-color: #F0F1F2; color: #6E737A; }
+.kpi.k-saldo { background: #fff; border-color: #e3e5e8; }
+.kpi.k-saldo .kpi-v { color: #059669; }
 /*__CSS_FIN__*/
 </style>
 </head>
@@ -2263,7 +2273,7 @@ button:disabled { opacity: .6; cursor: default; }
             kpi('Total certificado', fmtMoney(k.cert), k.certTotal ? 'con IVA: ' + fmtMoney(k.certTotal) : null) +
             kpi('Pendiente de certificar', fmtMoney(k.pendCert), 'según ficha de seguimiento', 'k-amber') +
             kpi('Pendiente de facturar', fmtMoney(k.pendFact), 'según ficha de seguimiento', 'k-amber') +
-            kpi('Saldo a favor de ENUE', fmtMoney(k.saldo), 'facturado − cobrado', 'k-green') +
+            kpi('Saldo a favor de ENUE', fmtMoney(k.saldo), 'facturado − cobrado', 'k-saldo') +
             kpi('Factura de la quincena', fmtMoney(k.facturaTotal),
                 D.factura && D.factura.ident && D.factura.ident.numero ? 'nº ' + D.factura.ident.numero : null) +
             '</div>';

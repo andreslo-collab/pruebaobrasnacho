@@ -458,6 +458,15 @@ button:disabled { opacity: .6; cursor: default; }
 @keyframes tmFade { from { opacity: 0; } to { opacity: 1; } }
 .tm-panel { z-index: 3; top: 100%; border: 0; border-bottom: 1px solid #d5d8dc; border-radius: 0; box-shadow: 0 20px 40px rgba(0,0,0,.22); padding: 12px 28px 18px; background: #fff; }
 .tabs-menu .tab { border-radius: 6px; }
+.tabs-menu summary, .tabs-menu[open] summary { background: linear-gradient(135deg, #0a0b0c, #131415); border-bottom: 1px solid rgba(255,255,255,.08); }
+.tabs-menu summary:hover { background: #17181a; border-color: rgba(255,255,255,.08); }
+.tabs-menu[open] summary { background: #0a0b0c; }
+.dash-cabecera + .tabs-menu { margin-top: -16px; }
+.dash-cabecera + .tabs-menu summary { border-top: 0; }
+.tabs-menu .tm-lab { color: #8b9097; }
+.tabs-menu summary strong { color: #fff; }
+.tabs-menu .tm-cnt { color: #9a9fa6; }
+.tabs-menu .tm-chev { border-right-color: #fff; border-bottom-color: #fff; }
 
 /* ===== roscos de definición de materiales ===== */
 .roscos { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-top: 4px; }

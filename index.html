@@ -401,6 +401,23 @@ button:disabled { opacity: .6; cursor: default; }
 .se-sc b { display:block; font-size:21px; font-weight:800; color:#0F1E29; margin:4px 0; } .se-sc small { font-size:11.5px; color:#6b7780; }
 @media (max-width:900px) { .se-2 { grid-template-columns:1fr; } .se-head h1 { font-size:21px; } .se-red-v { font-size:28px; } }
 @media print { .se-noprint { display:none !important; } .se { border:0; padding:0; background:#fff; } .se-card:hover, .se-q:hover { transform:none; box-shadow:none; } .se-lista { max-height:none; } .se-panel, .se-card, .se-red { break-inside:avoid; } }
+
+.se .se-apx{margin-top:28px;padding:10px 0 4px;border-top:1px solid #e3e0da;color:#8f8f8f}
+.se .se-apx-h{display:flex;align-items:center;gap:12px;font-size:12px}
+.se .se-apx-h span{letter-spacing:.12em;text-transform:uppercase;font-size:10px;color:#adadad}
+.se .se-apx-h b{font-weight:500;color:#808080}
+.se .se-apx-b{margin-left:auto;background:none;border:0;color:#8f8f8f;font-size:11px;text-decoration:underline;cursor:pointer;padding:0}
+.se .se-apx .body{display:none;margin-top:10px;font-size:11.5px;line-height:1.6;color:#8f8f8f}
+.se .se-apx.open .body{display:block}
+.se .se-apx table{width:100%;border-collapse:collapse;margin-top:8px;font-size:11px}
+.se .se-apx th,.se .se-apx td{padding:4px 6px;border-bottom:1px solid #ecebe7;text-align:right;font-weight:400}
+.se .se-apx th:first-child,.se .se-apx td:first-child{text-align:left}
+@media print{.se .se-apx .body{display:block}.se .se-apx-b{display:none}}
+.val-det{margin-top:14px;font-size:12px;overflow-x:auto}
+.val-det table{width:100%;border-collapse:collapse;margin-top:6px}
+.val-det th,.val-det td{padding:4px 8px;border-bottom:1px solid #e5e5e5;text-align:right}
+.val-det th:first-child,.val-det td:first-child{text-align:left}
+.val-det tr.tot td{font-weight:700;border-top:2px solid #999}
 /*__CSS_FIN__*/
 </style>
 </head>
@@ -2252,7 +2269,9 @@ button:disabled { opacity: .6; cursor: default; }
         var fi = (f && f.ident) || {};
         var presu = val('presupuestoObraAprox');
         if (presu === null && D.presupuesto && D.presupuesto.totales && D.presupuesto.totales.pem) { presu = D.presupuesto.totales.pem; }
-        var ejec = (ct.origen !== undefined && ct.origen !== null && !isNaN(ct.origen)) ? ct.origen : null;
+        var det = (s.detalle && s.detalle.length) ? s.detalle : null;
+        var detTot = s.detalleTotales || null;
+        var ejec = (det && detTot && detTot.origen !== undefined && detTot.origen !== null && !isNaN(detTot.origen)) ? detTot.origen : ((ct.origen !== undefined && ct.origen !== null && !isNaN(ct.origen)) ? ct.origen : null);
         var pctAv = (presu && ejec !== null) ? (ejec / presu) * 100 : null;
         var pendCert = val('pendienteCertificar'), pendFact = val('pendienteFacturar');
         var saldo = val('totalSaldoFavorEnue'), emit = val('facturasEmitidas'), pagos = val('pagosRecibidos');
@@ -2278,6 +2297,11 @@ button:disabled { opacity: .6; cursor: default; }
         var fechaAct = (s.ident && s.ident.fecha) || D.periodo || '';
 
         var okN = function (v) { return v !== null && v !== undefined && !isNaN(v); };
+        var pieFicha = function (key, v) {
+            var r = s.resumen && s.resumen[key];
+            if (r && okN(r.total)) { return '<span>Con IVA:</span><strong>' + fmtMoney(r.total) + '</strong>'; }
+            return pieIva(v);
+        };
         var capsTodos = c.capitulos || [];
         var nuevoFmt = capsTodos.some(function (x) { return x.origen !== undefined || x.mes !== undefined; });
         var caps = capsTodos.map(function (x) {
@@ -2285,12 +2309,19 @@ button:disabled { opacity: .6; cursor: default; }
         }).filter(function (x) { return okN(x.origen) || okN(x.mes); });
         var capsMes = caps.filter(function (x) { return okN(x.mes) && x.mes !== 0; });
         var capsOri = caps.filter(function (x) { return okN(x.origen) && x.origen > 0; });
+        var usaFicha = false;
+        if (det) {
+            usaFicha = true;
+            caps = det;
+            capsMes = det.filter(function (x) { return okN(x.mes) && x.mes !== 0; }).map(function (x) { return { codigo: '', descripcion: x.nombre, mes: x.mes }; });
+            capsOri = det.filter(function (x) { return okN(x.origen) && x.origen > 0; }).map(function (x) { return { codigo: '', descripcion: x.nombre, origen: x.origen }; });
+        }
         var hayAnt = (ant !== null || des !== null || pen !== null);
 
         var nav = [['se-resumen', 'Resumen global'], ['se-lectura', 'Lectura rápida']];
         if (f) { nav.push(['se-facturas', 'Factura y cobros']); }
         if (caps.length) { nav.push(['se-cert', 'Certificación a origen']); }
-        if (hayAnt) { nav.push(['se-anticipo', 'Anticipo']); }
+        /* el anticipo no se destaca en la navegación */
         if (saldo !== null) { nav.push(['se-saldo', 'Saldo a favor de ENUE']); }
 
         var h = '<div class="se"><div class="se-top"></div>';
@@ -2314,12 +2345,12 @@ button:disabled { opacity: .6; cursor: default; }
         h += '<section class="se-sec" id="se-resumen">' +
             cab('Bloque 01', 'Resumen económico general', 'Cifras leídas de la ficha de seguimiento y de la certificación cargadas') +
             '<div class="se-grid">' +
-            card('Presupuesto obra aprox.', mon(presu), 'se-c-acc', pieIva(presu)) +
+            card('Presupuesto obra aprox.', mon(presu), 'se-c-acc', pieFicha('presupuesto', presu)) +
             card('Obra ejecutada a origen', mon(ejec), 'se-c-ok',
-                '<span>Según certificación a origen</span>' + (pctAv !== null ? '<strong class="se-chip-ok">~' + fmtNum(pctAv, 2) + ' %</strong>' : '')) +
+                '<span>' + (det ? 'Según ficha de seguimiento' : 'Según certificación a origen') + '</span>' + (pctAv !== null ? '<strong class="se-chip-ok">~' + fmtNum(pctAv, 2) + ' %</strong>' : '')) +
             card('Facturación emitida', mon(emit), 'se-c-pri', pagos !== null ? '<span>Pagos recibidos:</span><strong>' + fmtMoney(pagos) + '</strong>' : '') +
-            card('Pendiente de certificar', mon(pendCert), '', pieIva(pendCert)) +
-            card('Pendiente de facturar', mon(pendFact), '', pieIva(pendFact)) +
+            card('Pendiente de certificar', mon(pendCert), '', pieFicha('pendienteCertificar', pendCert)) +
+            card('Pendiente de facturar', mon(pendFact), '', pieFicha('pendienteFacturar', pendFact)) +
             (saldo !== null ? '<div class="se-card se-c-red"><div class="se-card-in"><span class="se-card-t">Saldo actual a favor de ENUE</span>' +
                 '<div class="se-card-v">' + esc(fmtMoney(saldo)) + '</div>' +
                 '<div class="se-card-p"><span>' + (fi.numero ? 'Factura ' + esc(fi.numero) : 'Según ficha de seguimiento') + '</span></div></div></div>' : '') +
@@ -2374,21 +2405,23 @@ button:disabled { opacity: .6; cursor: default; }
         if (caps.length) {
             var sumaMes = capsMes.reduce(function (a, x) { return a + x.mes; }, 0);
             var sumaOri = capsOri.reduce(function (a, x) { return a + x.origen; }, 0);
+            var totMesF = (det && detTot && okN(detTot.mes)) ? detTot.mes : sumaMes;
+            var totOriF = (det && detTot && okN(detTot.origen)) ? detTot.origen : (ejec !== null ? ejec : sumaOri);
             var maxv = capsOri.reduce(function (a, x) { return Math.max(a, x.origen); }, 0) || 1;
             var top = capsOri.slice().sort(function (x, y) { return y.origen - x.origen; }).slice(0, 3);
             h += '<section class="se-sec" id="se-cert">' +
-                cab('Bloque 03', 'Certificación a origen por capítulos', 'Importes certificados por capítulo técnico',
-                    '<div class="se-tot"><span>Total certificación mostrada</span><strong>' + esc(fmtMoney(ejec !== null ? ejec : sumaOri)) + '</strong></div>') +
-                '<div class="se-2"><div class="se-panel se-flush"><div class="se-ph"><span>Capítulos de obra</span><small>' + capsMes.length + ' capítulos</small></div>' +
+                cab('Bloque 03', (usaFicha ? 'Detalle de obra ejecutada por capítulos' : 'Certificación a origen por capítulos'), (usaFicha ? 'Importes de la ficha de seguimiento económico (columnas Mes y Origen)' : 'Importes certificados por capítulo técnico'),
+                    '<div class="se-tot"><span>' + (usaFicha ? 'Total obra ejecutada a origen' : 'Total certificación mostrada') + '</span><strong>' + esc(fmtMoney(totOriF)) + '</strong></div>') +
+                '<div class="se-2"><div class="se-panel se-flush"><div class="se-ph"><span>Capítulos de obra</span><small>' + capsMes.length + ' capítulos' + (usaFicha ? ' · columna Mes' : '') + '</small></div>' +
                 (capsMes.length ? '<div class="se-lista">' + capsMes.map(function (x, i) {
-                    var pc = sumaMes ? (x.mes / sumaMes) * 100 : null;
+                    var pc = totMesF ? (x.mes / totMesF) * 100 : null;
                     return '<div class="se-row"><div class="se-row-l"><span class="se-num">' + ('0' + (i + 1)).slice(-2) + '</span>' +
                         '<div><b>' + esc(x.descripcion || '') + '</b><small>' + esc(x.codigo || '') + '</small></div></div>' +
                         '<div class="se-row-r"><b class="se-mono">' + esc(fmtMoney(x.mes)) + '</b>' +
                         (pc !== null ? '<span class="se-chip-ok">' + esc(fmtNum(pc, 1)) + ' %</span>' : '') + '</div></div>';
                 }).join('') + '</div>' : '<div class="se-note">Sin importes en la columna Mes de esta certificación.</div>') +
-                '<div class="se-pie"><span>Total certificado en el mes</span><b class="se-mono">' + esc(fmtMoney(sumaMes)) + '</b></div></div>' +
-                '<div class="se-panel"><div class="se-ph2"><h3>Distribución de costes acumulados</h3><small>Pasa el ratón para resaltar</small></div>' +
+                '<div class="se-pie"><span>Total certificado en el mes</span><b class="se-mono">' + esc(fmtMoney(totMesF)) + '</b></div></div>' +
+                '<div class="se-panel"><div class="se-ph2"><h3>Distribución de costes acumulados</h3><small>' + (usaFicha ? 'Columna Origen' : 'Pasa el ratón para resaltar') + '</small></div>' +
                 '<div class="se-bars">' + capsOri.map(function (x) {
                     return '<div class="se-bar"><div class="se-bar-t"><span>' + esc(x.descripcion || '') + '</span><b class="se-mono">' + esc(fmtMoney(x.origen)) + '</b></div>' +
                         '<div class="se-bar-k"><div class="se-bar-f" style="width:' + Math.max(4, (x.origen / maxv) * 100) + '%"></div></div></div>';
@@ -2398,35 +2431,23 @@ button:disabled { opacity: .6; cursor: default; }
                 }).join('') + '.</div>' : '') + '</div></div></section>';
         }
 
-        /* 5 · anticipo */
+        /* 5 · anticipo (apartado secundario, presentación discreta) */
         if (hayAnt) {
-            var pctAnt = (ant !== null && presu) ? (ant / presu) * 100 : null;
-            var pctAmort = (ant && des !== null) ? (des / ant) * 100 : null;
-            h += '<section class="se-sec" id="se-anticipo">' +
-                cab('Bloque 04', 'Anticipo / previsión de fondos', 'Estado del anticipo y su regularización en certificaciones',
-                    pctAnt !== null ? '<span class="se-tag">Anticipo ≈ ' + esc(fmtNum(pctAnt, 1)) + ' % del presupuesto</span>' : '') +
-                '<div class="se-panel se-ant">' +
-                '<div class="se-label">Diagrama operativo de regularización</div>' +
-                '<div class="se-3">' +
-                '<div class="se-step"><i>1</i><b>Firma y aceptación</b><p>Formalización del presupuesto y de la previsión de fondos de obra.</p></div>' +
-                '<div class="se-step"><i>2</i><b>Abono inicial</b><p>' + (ant !== null ? 'Anticipo abonado: <strong>' + esc(fmtMoney(ant)) + '</strong>.' : 'Importe no disponible.') + '</p></div>' +
-                '<div class="se-step acc"><i>3</i><b>Regularización</b><p>' + (des !== null ? 'Regularizado hasta ahora: <strong>' + esc(fmtMoney(des)) + '</strong>.' : 'Importe no disponible.') + '</p></div>' +
-                '</div>' +
-                '<div class="se-estado"><div class="se-label">Estado numérico del anticipo</div><div class="se-3">' +
-                '<div class="se-bx"><span>Anticipo inicial abonado</span><b>' + esc(mon(ant)) + '</b>' + (conIva(ant) !== null ? '<small>Con IVA: ' + esc(fmtMoney(conIva(ant))) + '</small>' : '') + '</div>' +
-                '<div class="se-bx"><span>Descontado / regularizado</span><b class="amb">' + esc(mon(des)) + '</b>' + (conIva(des) !== null ? '<small>Con IVA: ' + esc(fmtMoney(conIva(des))) + '</small>' : '') + '</div>' +
-                '<div class="se-bx"><span>Pendiente de regularizar</span><b class="pr">' + esc(mon(pen)) + '</b>' + (conIva(pen) !== null ? '<small>Con IVA: ' + esc(fmtMoney(conIva(pen))) + '</small>' : '') + '</div>' +
-                '</div>';
-            if (pctAmort !== null) {
-                h += '<div class="se-track se-sm"><div class="se-fill" style="width:' + Math.max(0, Math.min(100, pctAmort)) + '%"></div></div>' +
-                    '<small class="se-hint">Regularizado: ' + esc(fmtNum(pctAmort, 1)) + ' % del anticipo inicial.</small>';
-            }
-            if (ant !== null && des !== null && pen !== null) {
-                var cuadra = Math.abs((ant - des) - pen) < 0.05;
-                h += '<p class="se-form">' + esc(fmtMoney(ant)) + ' − ' + esc(fmtMoney(des)) + ' = ' + esc(fmtMoney(pen)) +
-                    ' <span class="se-tag ' + (cuadra ? 'ok' : 'warn') + '">' + (cuadra ? 'Cuadra' : 'Revisar') + '</span></p>';
-            }
-            h += '</div></div></section>';
+            var R4 = s.resumen || {};
+            var filaA = function (etq, key, v) {
+                var r = R4[key] || {};
+                var b = okN(r.base) ? r.base : v;
+                var ivv = okN(r.iva) ? r.iva : ((b !== null && ivaP !== null) ? b * ivaP / 100 : null);
+                var tt = okN(r.total) ? r.total : conIva(b);
+                return '<tr><td>' + esc(etq) + '</td><td>' + esc(mon(b)) + '</td><td>' + esc(mon(ivv)) + '</td><td>' + esc(mon(tt)) + '</td></tr>';
+            };
+            h += '<section class="se-sec se-apx" id="se-anticipo">' +
+                '<div class="se-apx-h"><span>Bloque 04</span><b>Anticipo / previsión de fondos</b>' +
+                '<button class="se-apx-b se-noprint" type="button" onclick="this.closest(' + Q + '.se-apx' + Q + ').classList.toggle(' + Q + 'open' + Q + ')">Ver detalle</button></div>' +
+                '<div class="body"><p>El anticipo inicial o previsión de fondos se regulariza mediante descuento en las certificaciones de obra, según lo pactado en el contrato. Se recogen los importes que figuran en la ficha de seguimiento.</p>' +
+                '<table><thead><tr><th>Concepto</th><th>Base</th><th>IVA</th><th>Total</th></tr></thead><tbody>' +
+                filaA('Anticipo inicial', 'anticipoInicial', ant) + filaA('Descontado', 'descontado', des) + filaA('Pendiente de regularizar', 'anticipoPendiente', pen) +
+                '</tbody></table></div></section>';
         }
 
         /* 6 · saldo */
@@ -3266,6 +3287,7 @@ button:disabled { opacity: .6; cursor: default; }
         }
         var buffer = await file.arrayBuffer();
         var pdf = await lib.getDocument({ data: buffer }).promise;
+        var crudos = [];
         var paginas = [];
         for (var p = 1; p <= pdf.numPages; p++) {
             var page = await pdf.getPage(p);
@@ -3275,6 +3297,7 @@ button:disabled { opacity: .6; cursor: default; }
                 var it = cont.items[i];
                 if (!it.str || !it.transform) { continue; }
                 items.push([it.transform[4], it.transform[5], it.str]);
+                crudos.push({ p: p, x: it.transform[4], y: it.transform[5], w: it.width || 0, s: it.str });
             }
             var rows = DX.rowsFromItems(items);
             var lineasPag = [];
@@ -3287,7 +3310,120 @@ button:disabled { opacity: .6; cursor: default; }
         }
         var planas = [];
         for (var q = 0; q < paginas.length; q++) { planas = planas.concat(paginas[q]); }
-        return { lineas: planas, numPaginas: pdf.numPages, items: planas };
+        return { lineas: planas, numPaginas: pdf.numPages, items: planas, crudos: crudos };
+    }
+
+    /* ---- Tabla "DETALLE OBRA EJECUTADA" y cuadro resumen de la ficha (por coordenadas) ---- */
+    function leerDetalleFicha(crudos) {
+        var out = { detalle: [], totales: null, resumen: {} };
+        var RE_NUM = /^-?\d{1,3}(?:\.\d{3})*,\d{2}\s*€?$/;
+        var toNum = function (t) { return parseFloat(String(t).replace(/[€\s]/g, '').replace(/\./g, '').replace(',', '.')); };
+        var normT = function (t) { return String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(); };
+        var esNum = function (c) { return RE_NUM.test(String(c.s).trim()); };
+        var cx = function (c) { return c.x + (c.w || 0) / 2; };
+        var unir = function (lista) {
+            lista = lista.slice().sort(function (a, b) { return a.x - b.x; });
+            var t = '', fin = null;
+            lista.forEach(function (c) { if (fin !== null && c.x - fin > 1.5) { t += ' '; } t += c.s; fin = c.x + (c.w || 0); });
+            return t.replace(/\s+/g, ' ').trim();
+        };
+        var paginas = {};
+        (crudos || []).forEach(function (c) { if (c.s && String(c.s).trim()) { (paginas[c.p] = paginas[c.p] || []).push(c); } });
+        Object.keys(paginas).forEach(function (pk) {
+            var its = paginas[pk];
+
+            /* ---------- detalle de obra ejecutada ---------- */
+            if (!out.detalle.length) {
+                var hMes = null, hPar = null;
+                its.filter(function (c) { return normT(c.s) === 'mes'; }).forEach(function (m) {
+                    if (hMes) { return; }
+                    var p = its.filter(function (c) { return normT(c.s) === 'partida' && Math.abs(c.y - m.y) < 4 && c.x < m.x; })[0];
+                    if (p) { hMes = m; hPar = p; }
+                });
+                if (hMes) {
+                    var cMes = cx(hMes);
+                    var candOri = its.filter(function (c) { return normT(c.s) === 'origen' && Math.abs(c.y - hMes.y) < 4 && c.x > hMes.x; })
+                        .sort(function (a, b) { return (Math.abs(a.y - hMes.y) - Math.abs(b.y - hMes.y)) || (a.x - b.x); });
+                    var hOri = candOri[0] || null;
+                    var cOri = hOri ? cx(hOri) : cMes + 34;
+                    var candAnt = its.filter(function (c) { var n = normT(c.s); return (n === 'origen' || n === 'anterior' || n === 'origen anterior') && c.x > (hOri ? hOri.x : cOri) + 20 && Math.abs(c.y - hMes.y) < 12; })
+                        .sort(function (a, b) { return a.x - b.x; });
+                    var cAnt = candAnt[0] ? cx(candAnt[0]) : cOri + (cOri - cMes);
+                    var b1 = (cMes + cOri) / 2, b2 = (cOri + cAnt) / 2;
+                    var xName = hPar.x - 45;
+                    var debajo = its.filter(function (c) { return c.y < hMes.y - 4; });
+                    var nombres = debajo.filter(function (c) { return !esNum(c) && c.x >= xName && c.x < hMes.x - 5; });
+                    var numeros = debajo.filter(function (c) { return esNum(c) && c.x >= hMes.x - 30 && cx(c) < cAnt + 30; });
+                    var filas = [];
+                    nombres.concat(numeros).sort(function (a, b) { return b.y - a.y; }).forEach(function (c) {
+                        var f = filas.filter(function (r) { return Math.abs(r.y - c.y) <= 3; })[0];
+                        if (!f) { f = { y: c.y, noms: [], nums: [] }; filas.push(f); }
+                        (esNum(c) ? f.nums : f.noms).push(c);
+                    });
+                    filas.sort(function (a, b) { return b.y - a.y; });
+                    for (var r = 0; r < filas.length; r++) {
+                        var f = filas[r];
+                        var nom = unir(f.noms);
+                        var v = { mes: null, origen: null, anterior: null };
+                        f.nums.forEach(function (c) { var m = cx(c); var k = m < b1 ? 'mes' : (m < b2 ? 'origen' : 'anterior'); v[k] = toNum(c.s); });
+                        if (!nom) { if (f.nums.length) { out.totales = v; } break; }
+                        out.detalle.push({ nombre: nom, mes: v.mes, origen: v.origen, anterior: v.anterior });
+                    }
+                }
+            }
+
+            /* ---------- cuadro resumen (base / IVA / total) ---------- */
+            var defs = [
+                ['facturasEmitidas', /^facturas emitidas/], ['anticipoInicial', /^anticipo inicial/], ['descontado', /^descontado/],
+                ['anticipoPendiente', /^pendiente\s*:/], ['presupuesto', /^presupuesto obra/],
+                ['pendienteCertificar', /^pendiente de certificar/], ['pendienteFacturar', /^pendiente de facturar/]
+            ];
+            var izq = its.filter(function (c) { return c.x < 500; }).sort(function (a, b) { return b.y - a.y; });
+            var grupos = [];
+            izq.forEach(function (c) {
+                var g = grupos.filter(function (q) { return Math.abs(q.y - c.y) <= 2.5; })[0];
+                if (!g) { g = { y: c.y, it: [] }; grupos.push(g); }
+                g.it.push(c);
+            });
+            grupos.forEach(function (g) {
+                var etq = normT(unir(g.it.filter(function (c) { return !esNum(c) && c.x < 200; })));
+                var nums = g.it.filter(esNum).sort(function (a, b) { return a.x - b.x; });
+                if (!etq || !nums.length) { return; }
+                defs.forEach(function (d) {
+                    if (!out.resumen[d[0]] && d[1].test(etq)) {
+                        out.resumen[d[0]] = { base: toNum(nums[0].s), iva: nums[1] ? toNum(nums[1].s) : null, total: nums[2] ? toNum(nums[2].s) : null };
+                    }
+                });
+            });
+        });
+        return out;
+    }
+
+    function aplicarDetalleFicha(res, crudos) {
+        var o = leerDetalleFicha(crudos);
+        res.avisos = res.avisos || [];
+        if (o.detalle.length) {
+            res.detalle = o.detalle;
+            res.detalleTotales = o.totales;
+            if (o.totales) {
+                var sm = 0, so = 0;
+                o.detalle.forEach(function (x) { sm += x.mes || 0; so += x.origen || 0; });
+                if (o.totales.mes != null && Math.abs(sm - o.totales.mes) > 0.05) { res.avisos.push('Detalle obra ejecutada: la suma de la columna Mes (' + sm.toFixed(2) + ') no coincide con el total de la ficha (' + o.totales.mes.toFixed(2) + ').'); }
+                if (o.totales.origen != null && Math.abs(so - o.totales.origen) > 0.05) { res.avisos.push('Detalle obra ejecutada: la suma de la columna Origen (' + so.toFixed(2) + ') no coincide con el total de la ficha (' + o.totales.origen.toFixed(2) + ').'); }
+            }
+        } else {
+            res.avisos.push('No se ha encontrado la tabla «Detalle obra ejecutada» en la ficha; el bloque 3 usará la certificación.');
+        }
+        if (Object.keys(o.resumen).length) { res.resumen = o.resumen; }
+    }
+
+    function tablaDetalleFicha(seg) {
+        if (!seg || !seg.detalle || !seg.detalle.length) { return ''; }
+        var fm = function (n) { return (n === null || n === undefined || isNaN(n)) ? '' : n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; };
+        var t = seg.detalleTotales || {};
+        return '<div class="val-det"><b>Detalle obra ejecutada (leído de la ficha)</b><table><thead><tr><th>Partida</th><th>Mes</th><th>Origen</th><th>Origen anterior</th></tr></thead><tbody>' +
+            seg.detalle.map(function (x) { return '<tr><td>' + esc(x.nombre) + '</td><td>' + fm(x.mes) + '</td><td>' + fm(x.origen) + '</td><td>' + fm(x.anterior) + '</td></tr>'; }).join('') +
+            '<tr class="tot"><td>Totales</td><td>' + fm(t.mes) + '</td><td>' + fm(t.origen) + '</td><td>' + fm(t.anterior) + '</td></tr></tbody></table></div>';
     }
 
     function soloTexto(lineas) {
@@ -3324,6 +3460,7 @@ button:disabled { opacity: .6; cursor: default; }
             var lectura = await leerPdf(file);
             var res = parsearCon(zona.parser, soloTexto(lectura.lineas), { origen: 'PDF', numPaginas: lectura.numPaginas });
             res._lineas = soloTexto(lectura.lineas);
+            if (zona.parser === 'seguimiento') { try { aplicarDetalleFicha(res, lectura.crudos); } catch (eDet) { (res.avisos = res.avisos || []).push('No se pudo leer la tabla Detalle obra ejecutada: ' + eDet.message); } }
             return res;
         }
         if (zona.tipo === 'hoja' || /\.(xlsx|xls|csv)$/.test(nombre)) {
@@ -3561,7 +3698,7 @@ button:disabled { opacity: .6; cursor: default; }
                         '</label>';
                 }
                 partes.push(tarjetaCabecera('Ficha de seguimiento económico (PDF 3)', 'Los 7 KPIs clave del cuadro financiero de obra.',
-                    '<div class="val-grid-3">' + celdas + '</div>', seg, 'pdf3'));
+                    '<div class="val-grid-3">' + celdas + '</div>' + tablaDetalleFicha(seg), seg, 'pdf3'));
             } catch (err) { partes.push(bloqueFallo('Ficha de seguimiento económico (PDF 3)', seg, err)); }
         }
 

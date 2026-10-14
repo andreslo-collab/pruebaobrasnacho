@@ -426,7 +426,7 @@ button:disabled { opacity: .6; cursor: default; }
 .val-det tr.tot td{font-weight:700;border-top:2px solid #999}
 
 /* ===== cabeceras unidas, marca sin logo y menú de secciones ===== */
-.marca strong { font-size: 21px; font-weight: 800; letter-spacing: -.2px; text-transform: none; line-height: 1.05; }
+.marca strong { font-size: 21px; font-weight: 400; letter-spacing: -.2px; text-transform: none; line-height: 1.05; }
 .marca small { letter-spacing: .3px; }
 .cab-estado, .solo-lectura { background: none; border: 0; border-radius: 0; padding: 0; color: #9a9fa6; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
 .dash-cabecera { border-radius: 0; margin: -18px -28px 0; padding: 24px 28px; background: linear-gradient(135deg, #2b2e32, #43474d); border-top: 1px solid rgba(255,255,255,.08); }
@@ -458,6 +458,21 @@ button:disabled { opacity: .6; cursor: default; }
 @keyframes tmFade { from { opacity: 0; } to { opacity: 1; } }
 .tm-panel { z-index: 3; top: 100%; border: 0; border-bottom: 1px solid #d5d8dc; border-radius: 0; box-shadow: 0 20px 40px rgba(0,0,0,.22); padding: 12px 28px 18px; background: #fff; }
 .tabs-menu .tab { border-radius: 6px; }
+
+/* ===== roscos de definición de materiales ===== */
+.roscos { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-top: 4px; }
+.rosco-card { background: #fff; border: 1px solid #e3e5e8; border-radius: 0; padding: 18px 14px 16px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; transition: border-color .2s, transform .2s, box-shadow .2s; }
+.rosco-card:hover { border-color: #8d9298; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.08); }
+.rosco-svg { width: 132px; height: 132px; display: block; }
+.rosco-svg .rosco-pista { fill: none; stroke: #e6e8eb; stroke-width: 11; }
+.rosco-svg .rosco-prog { fill: none; stroke-width: 11; stroke-linecap: butt; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dasharray .6s ease; }
+.rosco-svg text { font-family: inherit; fill: #16181a; }
+.rosco-pct { font-size: 25px; font-weight: 600; }
+.rosco-fase { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #16181a; margin-top: 6px; }
+.rosco-tit { font-size: 12px; color: #6e737a; min-height: 16px; }
+.rosco-det { font-size: 12px; color: #43474d; margin-top: 4px; }
+.rosco-sub { font-size: 11px; color: #8d9298; }
+@media print { .rosco-card { break-inside: avoid; box-shadow: none; transform: none; } }
 /*__CSS_FIN__*/
 </style>
 </head>
@@ -2208,6 +2223,39 @@ button:disabled { opacity: .6; cursor: default; }
         };
     }
 
+    function roscosFases(D) {
+        var m = D.materiales;
+        if (!m || !m.fases || !m.fases.length) { return ''; }
+        var items = m.items || [];
+        var C = 2 * Math.PI * 48;
+        var cards = m.fases.map(function (f, ix) {
+            var defs = items.length ? items.filter(function (i) { return i.fase === f.fase; }) : (f.definiciones || []);
+            var eleg = defs.filter(function (x) { return x.estado === 'ELEGIDO'; }).length;
+            var noproc = defs.filter(function (x) { return x.estado === 'NO PROCEDE'; }).length;
+            var pend = defs.filter(function (x) { return x.estado === 'PENDIENTE'; }).length;
+            var proc = defs.filter(function (x) { return x.estado === 'EN PROCESO'; }).length;
+            var base = defs.length - noproc;
+            var pct = base > 0 ? (eleg / base) * 100 : null;
+            var long = pct === null ? 0 : Math.max(0, Math.min(100, pct)) * C / 100;
+            var gid = 'rg' + ix;
+            var tit = (f.titulo || '').replace(/^FASE\s*\d+\s*-?\s*/i, '').slice(0, 48);
+            return '<div class="rosco-card">' +
+                '<svg class="rosco-svg" viewBox="0 0 120 120" role="img" aria-label="' + esc(f.fase) + ': ' + (pct === null ? 'sin datos' : fmtPct(pct, 0)) + '">' +
+                '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5b6067"/><stop offset="1" stop-color="#16181a"/></linearGradient></defs>' +
+                '<circle class="rosco-pista" cx="60" cy="60" r="48"/>' +
+                '<circle class="rosco-prog" cx="60" cy="60" r="48" stroke="url(#' + gid + ')" stroke-dasharray="' + long.toFixed(2) + ' ' + C.toFixed(2) + '"/>' +
+                '<text class="rosco-pct" x="60" y="67" text-anchor="middle">' + (pct === null ? '—' : fmtPct(pct, 0)) + '</text>' +
+                '</svg>' +
+                '<span class="rosco-fase">' + esc(f.fase) + '</span>' +
+                '<span class="rosco-tit">' + esc(tit) + '</span>' +
+                '<span class="rosco-det">' + eleg + ' de ' + base + ' elegidas</span>' +
+                '<span class="rosco-sub">' + pend + ' pendientes · ' + proc + ' en proceso</span>' +
+                '</div>';
+        }).join('');
+        return '<div class="bloque">' + filaCabecera('Definición de materiales', 'Porcentaje de definiciones elegidas en cada fase.', m.fases.length + ' fases') +
+            '<div class="roscos">' + cards + '</div></div>';
+    }
+
     function tabResumen(D) {
         var k = kpisCabecera(D);
         var html = '<div class="kpis">' +
@@ -2219,6 +2267,8 @@ button:disabled { opacity: .6; cursor: default; }
             kpi('Factura de la quincena', fmtMoney(k.facturaTotal),
                 D.factura && D.factura.ident && D.factura.ident.numero ? 'nº ' + D.factura.ident.numero : null) +
             '</div>';
+
+        html += roscosFases(D);
 
         var caps = capitulosUnificados(D);
         if (caps.length) {

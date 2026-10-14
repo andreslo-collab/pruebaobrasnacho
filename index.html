@@ -448,6 +448,16 @@ button:disabled { opacity: .6; cursor: default; }
 .tabs-menu .tab.activa { background: #16181a; color: #fff; }
 .tab-n { font-size: 11px; font-weight: 700; opacity: .5; font-variant-numeric: tabular-nums; }
 @media print { .tabs-menu { display: none !important; } }
+
+/* ===== desplegable integrado en el fondo + velo ===== */
+.tabs-menu { margin: 0 -28px; }
+.tabs-menu summary { position: relative; z-index: 2; background: transparent; border: 0; border-bottom: 1px solid #d5d8dc; border-radius: 0; box-shadow: none; padding: 14px 28px; }
+.tabs-menu summary:hover { background: rgba(22,24,26,.04); border-color: #d5d8dc; box-shadow: none; }
+.tabs-menu[open] summary { background: #fff; border-color: #d5d8dc; box-shadow: none; }
+.tabs-menu[open]::before { content: ''; position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(22,24,26,.40); z-index: 1; animation: tmFade .2s ease-out; }
+@keyframes tmFade { from { opacity: 0; } to { opacity: 1; } }
+.tm-panel { z-index: 3; top: 100%; border: 0; border-bottom: 1px solid #d5d8dc; border-radius: 0; box-shadow: 0 20px 40px rgba(0,0,0,.22); padding: 12px 28px 18px; background: #fff; }
+.tabs-menu .tab { border-radius: 6px; }
 /*__CSS_FIN__*/
 </style>
 </head>
@@ -2818,12 +2828,8 @@ button:disabled { opacity: .6; cursor: default; }
         { id: 'seguimiento_economico', etiqueta: 'Seguimiento económico' },
         { id: 'facturacion', etiqueta: 'Facturación' },
         { id: 'def_materiales', etiqueta: 'Definición de materiales' },
-        { id: 'datos_obra', etiqueta: 'Datos y resumen de obra' },
-        { id: 'materiales', etiqueta: 'Materiales' },
         { id: 'avance', etiqueta: 'Avance vs presupuesto' },
-        { id: 'certificaciones', etiqueta: 'Certificaciones quincenales' },
-        { id: 'ruta_critica', etiqueta: 'Ruta crítica y acopios' },
-        { id: 'ficha_tecnica', etiqueta: 'Ficha técnica y cláusulas' }
+        { id: 'certificaciones', etiqueta: 'Certificaciones quincenales' }
     ];
 
     /** HTML de una pestaña. filtros = {fase, estado} */
@@ -2853,7 +2859,7 @@ button:disabled { opacity: .6; cursor: default; }
         function cerrar(fuera) {
             var ms = document.querySelectorAll('.tabs-menu[open]');
             for (var i = 0; i < ms.length; i++) {
-                if (!fuera || !ms[i].contains(fuera)) { ms[i].removeAttribute('open'); }
+                if (!fuera || fuera === ms[i] || !ms[i].contains(fuera)) { ms[i].removeAttribute('open'); }
             }
         }
         document.addEventListener('click', function (e) { cerrar(e.target); });

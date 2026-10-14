@@ -429,7 +429,7 @@ button:disabled { opacity: .6; cursor: default; }
 .marca strong { font-size: 21px; font-weight: 400; letter-spacing: -.2px; text-transform: none; line-height: 1.05; }
 .marca small { letter-spacing: .3px; }
 .cab-estado, .solo-lectura { background: none; border: 0; border-radius: 0; padding: 0; color: #9a9fa6; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
-.dash-cabecera { border-radius: 0; margin: -18px -28px 0; padding: 24px 28px; background: linear-gradient(135deg, #2b2e32, #43474d); border-top: 1px solid rgba(255,255,255,.08); }
+.dash-cabecera { border-radius: 0; margin: -18px -28px 0; padding: 24px 28px; background: linear-gradient(135deg, #0a0b0c, #131415); border-top: 1px solid rgba(255,255,255,.07); }
 .dash-chip { background: none; border: 0; border-radius: 0; padding: 0; color: #b4b8bd; font-size: 10.5px; font-weight: 700; letter-spacing: .14em; }
 .tabs-menu { position: relative; z-index: 30; }
 .tabs-menu summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 14px; padding: 12px 18px; background: #fff; border: 1px solid #e3e5e8; border-radius: 12px; transition: border-color .15s, box-shadow .15s; user-select: none; }
@@ -2241,7 +2241,7 @@ button:disabled { opacity: .6; cursor: default; }
             var tit = (f.titulo || '').replace(/^FASE\s*\d+\s*-?\s*/i, '').slice(0, 48);
             return '<div class="rosco-card">' +
                 '<svg class="rosco-svg" viewBox="0 0 120 120" role="img" aria-label="' + esc(f.fase) + ': ' + (pct === null ? 'sin datos' : fmtPct(pct, 0)) + '">' +
-                '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5b6067"/><stop offset="1" stop-color="#16181a"/></linearGradient></defs>' +
+                '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#86efac"/><stop offset="1" stop-color="#15803d"/></linearGradient></defs>' +
                 '<circle class="rosco-pista" cx="60" cy="60" r="48"/>' +
                 '<circle class="rosco-prog" cx="60" cy="60" r="48" stroke="url(#' + gid + ')" stroke-dasharray="' + long.toFixed(2) + ' ' + C.toFixed(2) + '"/>' +
                 '<text class="rosco-pct" x="60" y="67" text-anchor="middle">' + (pct === null ? '—' : fmtPct(pct, 0)) + '</text>' +
@@ -2263,7 +2263,7 @@ button:disabled { opacity: .6; cursor: default; }
             kpi('Total certificado', fmtMoney(k.cert), k.certTotal ? 'con IVA: ' + fmtMoney(k.certTotal) : null) +
             kpi('Pendiente de certificar', fmtMoney(k.pendCert), 'según ficha de seguimiento', 'k-amber') +
             kpi('Pendiente de facturar', fmtMoney(k.pendFact), 'según ficha de seguimiento', 'k-amber') +
-            kpi('Saldo a favor de ENUE', fmtMoney(k.saldo), 'facturado − cobrado', 'k-dark') +
+            kpi('Saldo a favor de ENUE', fmtMoney(k.saldo), 'facturado − cobrado', 'k-green') +
             kpi('Factura de la quincena', fmtMoney(k.facturaTotal),
                 D.factura && D.factura.ident && D.factura.ident.numero ? 'nº ' + D.factura.ident.numero : null) +
             '</div>';

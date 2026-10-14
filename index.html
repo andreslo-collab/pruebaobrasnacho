@@ -492,6 +492,24 @@ button:disabled { opacity: .6; cursor: default; }
 .se-card.se-c-red .se-card-p { border-color: #F0F1F2; color: #6E737A; }
 .kpi.k-saldo { background: #fff; border-color: #e3e5e8; }
 .kpi.k-saldo .kpi-v { color: #059669; }
+
+/* pendientes: fondo negro, cifra naranja blanquecino */
+.kpi.k-neg { background: #0b0c0d; border-color: #26292d; }
+.kpi.k-neg .kpi-t { color: #aeb2b7; }
+.kpi.k-neg .kpi-v { color: #ffd9b8; }
+.kpi.k-neg .kpi-n { color: #8d9298; }
+.se-card.se-c-neg { background: #0b0c0d; border: 1px solid #26292d; }
+.se-card.se-c-neg::before { display: none; }
+.se-card.se-c-neg:hover { border-color: #ffd9b8; box-shadow: 0 8px 20px rgba(0,0,0,.25); }
+.se-card.se-c-neg .se-card-t { color: #aeb2b7; }
+.se-card.se-c-neg .se-card-v { color: #ffd9b8; }
+.se-card.se-c-neg .se-card-p { border-color: #26292d; color: #8d9298; }
+.se-card.se-c-neg .se-card-p strong { color: #e6e8ea; }
+.se-panel.se-sc-neg { background: #0b0c0d; border-color: #26292d; }
+.se-sc-neg span { color: #aeb2b7; }
+.se-sc-neg b { color: #ffd9b8; }
+.se-sc-neg small { color: #8d9298; }
+@media print { .kpi.k-neg, .se-card.se-c-neg, .se-panel.se-sc-neg { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 /*__CSS_FIN__*/
 </style>
 </head>
@@ -2280,8 +2298,8 @@ button:disabled { opacity: .6; cursor: default; }
         var html = '<div class="kpis">' +
             kpi('Certificado acumulado', fmtPct(k.pctCert), 'sobre ' + fmtMoney(k.pem), 'k-cyan') +
             kpi('Total certificado', fmtMoney(k.cert), k.certTotal ? 'con IVA: ' + fmtMoney(k.certTotal) : null) +
-            kpi('Pendiente de certificar', fmtMoney(k.pendCert), 'según ficha de seguimiento', 'k-amber') +
-            kpi('Pendiente de facturar', fmtMoney(k.pendFact), 'según ficha de seguimiento', 'k-amber') +
+            kpi('Pendiente de certificar', fmtMoney(k.pendCert), 'según ficha de seguimiento', 'k-neg') +
+            kpi('Pendiente de facturar', fmtMoney(k.pendFact), 'según ficha de seguimiento', 'k-neg') +
             kpi('Saldo a favor de ENUE', fmtMoney(k.saldo), 'facturado − cobrado', 'k-saldo') +
             kpi('Factura de la quincena', fmtMoney(k.facturaTotal),
                 D.factura && D.factura.ident && D.factura.ident.numero ? 'nº ' + D.factura.ident.numero : null) +
@@ -2448,8 +2466,8 @@ button:disabled { opacity: .6; cursor: default; }
             card('Obra ejecutada a origen', mon(ejec), 'se-c-ok',
                 '<span>' + (det ? 'Según ficha de seguimiento' : 'Según certificación a origen') + '</span>' + (pctAv !== null ? '<strong class="se-chip-ok">~' + fmtNum(pctAv, 2) + ' %</strong>' : '')) +
             card('Facturación emitida', mon(emit), 'se-c-pri', pagos !== null ? '<span>Pagos recibidos:</span><strong>' + fmtMoney(pagos) + '</strong>' : '') +
-            card('Pendiente de certificar', mon(pendCert), '', pieFicha('pendienteCertificar', pendCert)) +
-            card('Pendiente de facturar', mon(pendFact), '', pieFicha('pendienteFacturar', pendFact)) +
+            card('Pendiente de certificar', mon(pendCert), 'se-c-neg', pieFicha('pendienteCertificar', pendCert)) +
+            card('Pendiente de facturar', mon(pendFact), 'se-c-neg', pieFicha('pendienteFacturar', pendFact)) +
             (saldo !== null ? '<div class="se-card se-c-red"><div class="se-card-in"><span class="se-card-t">Saldo actual a favor de ENUE</span>' +
                 '<div class="se-card-v">' + esc(fmtMoney(saldo)) + '</div>' +
                 '<div class="se-card-p"><span>' + (fi.numero ? 'Factura ' + esc(fi.numero) : 'Según ficha de seguimiento') + '</span></div></div></div>' : '') +
@@ -2565,8 +2583,8 @@ button:disabled { opacity: .6; cursor: default; }
                 '<div class="se-red"><div class="se-red-h"><div><span>Posición acreedora actual</span><h3>TOTAL SALDO A FAVOR DE ENUE</h3></div>' +
                 '<div class="se-red-v">' + esc(fmtMoney(saldo)) + '</div></div><p>' + txtSaldo + '</p></div>' +
                 '<div class="se-2b">' +
-                '<div class="se-panel se-sc"><div><span>Pendiente de certificar</span><b>' + esc(mon(pendCert)) + '</b>' + (conIva(pendCert) !== null ? '<small>Con IVA: ' + esc(fmtMoney(conIva(pendCert))) + '</small>' : '') + '</div></div>' +
-                '<div class="se-panel se-sc"><div><span>Pendiente de facturar</span><b>' + esc(mon(pendFact)) + '</b>' + (conIva(pendFact) !== null ? '<small>Con IVA: ' + esc(fmtMoney(conIva(pendFact))) + '</small>' : '') + '</div></div>' +
+                '<div class="se-panel se-sc se-sc-neg"><div><span>Pendiente de certificar</span><b>' + esc(mon(pendCert)) + '</b>' + (conIva(pendCert) !== null ? '<small>Con IVA: ' + esc(fmtMoney(conIva(pendCert))) + '</small>' : '') + '</div></div>' +
+                '<div class="se-panel se-sc se-sc-neg"><div><span>Pendiente de facturar</span><b>' + esc(mon(pendFact)) + '</b>' + (conIva(pendFact) !== null ? '<small>Con IVA: ' + esc(fmtMoney(conIva(pendFact))) + '</small>' : '') + '</div></div>' +
                 '</div></section>';
         }
 

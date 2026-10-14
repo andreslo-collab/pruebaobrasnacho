@@ -424,6 +424,30 @@ button:disabled { opacity: .6; cursor: default; }
 .val-det th,.val-det td{padding:4px 8px;border-bottom:1px solid #e5e5e5;text-align:right}
 .val-det th:first-child,.val-det td:first-child{text-align:left}
 .val-det tr.tot td{font-weight:700;border-top:2px solid #999}
+
+/* ===== cabeceras unidas, marca sin logo y menú de secciones ===== */
+.marca strong { font-size: 21px; font-weight: 800; letter-spacing: -.2px; text-transform: none; line-height: 1.05; }
+.marca small { letter-spacing: .3px; }
+.cab-estado, .solo-lectura { background: none; border: 0; border-radius: 0; padding: 0; color: #9a9fa6; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+.dash-cabecera { border-radius: 0; margin: -18px -28px 0; padding: 24px 28px; background: linear-gradient(135deg, #2b2e32, #43474d); border-top: 1px solid rgba(255,255,255,.08); }
+.dash-chip { background: none; border: 0; border-radius: 0; padding: 0; color: #b4b8bd; font-size: 10.5px; font-weight: 700; letter-spacing: .14em; }
+.tabs-menu { position: relative; z-index: 30; }
+.tabs-menu summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 14px; padding: 12px 18px; background: #fff; border: 1px solid #e3e5e8; border-radius: 12px; transition: border-color .15s, box-shadow .15s; user-select: none; }
+.tabs-menu summary::-webkit-details-marker { display: none; }
+.tabs-menu summary:hover { border-color: #16181a; box-shadow: 0 2px 10px rgba(22,24,26,.08); }
+.tabs-menu[open] summary { border-color: #16181a; }
+.tm-lab { font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #6e737a; }
+.tabs-menu summary strong { font-size: 15px; color: #16181a; }
+.tm-cnt { margin-left: auto; font-size: 12px; font-weight: 600; color: #6e737a; font-variant-numeric: tabular-nums; }
+.tm-chev { width: 8px; height: 8px; border-right: 2px solid #16181a; border-bottom: 2px solid #16181a; transform: rotate(45deg) translateY(-2px); transition: transform .2s; }
+.tabs-menu[open] .tm-chev { transform: rotate(225deg) translateY(-2px); }
+.tm-panel { position: absolute; left: 0; right: 0; top: calc(100% + 6px); background: #fff; border: 1px solid #d5d8dc; border-radius: 12px; box-shadow: 0 16px 44px rgba(22,24,26,.20); padding: 8px; display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 2px; max-height: 70vh; overflow: auto; animation: tmIn .16s ease-out; }
+@keyframes tmIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.tabs-menu .tab { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; white-space: normal; border: 0; background: transparent; border-radius: 8px; padding: 10px 12px; font-size: 13px; font-weight: 600; color: #3a3d42; }
+.tabs-menu .tab:hover { background: #f0f1f2; color: #16181a; }
+.tabs-menu .tab.activa { background: #16181a; color: #fff; }
+.tab-n { font-size: 11px; font-weight: 700; opacity: .5; font-variant-numeric: tabular-nums; }
+@media print { .tabs-menu { display: none !important; } }
 /*__CSS_FIN__*/
 </style>
 </head>
@@ -2808,6 +2832,34 @@ button:disabled { opacity: .6; cursor: default; }
         return fn(D || {}, filtros || {});
     }
 
+    /** Menú desplegable con todas las pestañas (los botones .tab conservan data-tab). */
+    function menuPestanas(activa) {
+        var etq = '', idx = 0;
+        var items = PESTANAS.map(function (t, i) {
+            var on = t.id === activa;
+            if (on) { etq = t.etiqueta; idx = i + 1; }
+            return '<button type="button" class="tab' + (on ? ' activa' : '') + '" data-tab="' + t.id + '">' +
+                '<span class="tab-n">' + (i < 9 ? '0' : '') + (i + 1) + '</span><span>' + esc(t.etiqueta) + '</span></button>';
+        }).join('');
+        return '<details class="tabs-menu"><summary><span class="tm-lab">Sección</span>' +
+            '<strong>' + esc(etq) + '</strong><span class="tm-cnt">' + idx + ' / ' + PESTANAS.length + '</span>' +
+            '<span class="tm-chev"></span></summary><div class="tm-panel">' + items + '</div></details>';
+    }
+
+    /** Cierra el menú al pulsar fuera o con Escape (se registra una sola vez). */
+    (function initMenu() {
+        if (typeof document === 'undefined' || root.__dxMenuInit) { return; }
+        root.__dxMenuInit = true;
+        function cerrar(fuera) {
+            var ms = document.querySelectorAll('.tabs-menu[open]');
+            for (var i = 0; i < ms.length; i++) {
+                if (!fuera || !ms[i].contains(fuera)) { ms[i].removeAttribute('open'); }
+            }
+        }
+        document.addEventListener('click', function (e) { cerrar(e.target); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { cerrar(null); } });
+    }());
+
     root.DXReport = {
         version: '1.0',
         esc: esc,
@@ -2825,7 +2877,8 @@ button:disabled { opacity: .6; cursor: default; }
         capitulosUnificados: capitulosUnificados,
         materialesInfo: materialesInfo,
         render: render,
-        PESTANAS: PESTANAS
+        PESTANAS: PESTANAS,
+        menuPestanas: menuPestanas
     };
 
 }(typeof globalThis !== 'undefined' ? globalThis : this));
@@ -3021,7 +3074,7 @@ button:disabled { opacity: .6; cursor: default; }
             '    }).join("");\n' +
             '    document.getElementById("root").innerHTML =\n' +
             '      \'<header class="cabecera"><div class="cabecera-in">\' +\n' +
-            '      \'<div class="marca"><span class="logo">EN</span><div><strong>ENUE</strong><small>\' +\n' +
+            '      \'<div class="marca"><div><strong>enue</strong><small>\' +\n' +
             '      DXReport.esc(DATOS.identificador || "") + (DATOS.periodo ? " · " + DXReport.esc(DATOS.periodo) : "") +\n' +
             '      \'</small></div></div><span class="solo-lectura">Informe de dirección · solo lectura</span>\' +\n' +
             '      \'</div></header><main class="contenido"><div class="dash">\' +\n' +
@@ -3030,7 +3083,7 @@ button:disabled { opacity: .6; cursor: default; }
             '      \'<h1>Informe ejecutivo de quincena</h1><p>\' + DXReport.esc(DATOS.identificador || "") +\n' +
             '      (DATOS.periodo ? " · " + DXReport.esc(DATOS.periodo) : "") + \'</p></div>\' +\n' +
             '      \'<div class="dash-botones"><button class="btn-sec" onclick="window.print()">Imprimir / PDF</button></div></div>\' +\n' +
-            '      \'<div class="tabs">\' + tabs + \'</div><div class="dash-cuerpo">\' + cuerpo + \'</div></div></main>\' +\n' +
+            '      \'\' + DXReport.menuPestanas(estado.pestana) + \'<div class="dash-cuerpo">\' + cuerpo + \'</div></div></main>\' +\n' +
             '      \'<footer class="pie"><span>ENUE Proyectos y Construcción</span><span>Informe autocontenido · sin conexión</span></footer>\';\n' +
             '    Array.prototype.forEach.call(document.querySelectorAll(".tab"), function (b) {\n' +
             '      b.onclick = function () { estado.pestana = b.getAttribute("data-tab"); pintar(); window.scrollTo(0, 0); };\n' +
@@ -3908,7 +3961,7 @@ button:disabled { opacity: .6; cursor: default; }
             '</div></details>')) +
             (avisos.length ? '<details class="dash-avisos"><summary>' + avisos.length + ' aviso(s) de extracción — revisar antes de compartir</summary><ul>' +
                 avisos.map(function (a) { return '<li>' + esc(a) + '</li>'; }).join('') + '</ul></details>' : '') +
-            '<div class="tabs">' + tabs + '</div>' +
+            DXReport.menuPestanas(state.pestana) +
             '<div class="dash-cuerpo">' + (RENDER[state.pestana] || RENDER.resumen)() + '</div>' +
             '</div>';
     }
@@ -3987,8 +4040,8 @@ button:disabled { opacity: .6; cursor: default; }
 
         root.innerHTML =
             '<header class="cabecera"><div class="cabecera-in">' +
-            '<div class="marca" id="btn-inicio"><span class="logo">E</span>' +
-            '<div><strong>ENUE</strong><small>Proyectos y Construcción</small></div></div>' +
+            '<div class="marca" id="btn-inicio">' +
+            '<div><strong>enue</strong><small>Proyectos y Construcción</small></div></div>' +
             '<span class="cab-estado">' + (state.soloLectura ? 'Informe de obra · solo lectura' : 'Control de certificaciones de obra') + '</span>' +
             '</div></header>' +
             (state.avisoGlobal ? '<div class="aviso-global">' + esc(state.avisoGlobal) + '</div>' : '') +

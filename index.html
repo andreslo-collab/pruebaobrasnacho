@@ -209,6 +209,12 @@ button:disabled { opacity: .6; cursor: default; }
 .salida-enlace { display: flex; flex-direction: column; gap: 8px; }
 .enlace-area { width: 100%; font-family: ui-monospace, monospace; font-size: 10.5px; padding: 8px; border: 1px solid #cfd2d6; border-radius: 8px; resize: vertical; }
 .salida-enlace .warn { color: #b45309; font-weight: 700; margin: 0; }
+.correo-box { margin-top: 6px; padding-top: 12px; border-top: 1px solid #e3e5e8; display: flex; flex-direction: column; gap: 8px; }
+.correo-lab { display: flex; flex-direction: column; gap: 3px; font-size: 11px; font-weight: 700; color: #555a61; }
+.correo-lab input, .correo-lab textarea { font: inherit; font-size: 12.5px; font-weight: 400; color: #16181a; padding: 8px; border: 1px solid #cfd2d6; border-radius: 8px; background: #fff; width: 100%; box-sizing: border-box; }
+.correo-lab textarea { resize: vertical; line-height: 1.5; }
+.correo-lab input:focus, .correo-lab textarea:focus { outline: none; border-color: #16181a; }
+
 
 .tabs { display: flex; gap: 6px; overflow-x: auto; padding: 6px; background: #fff; border: 1px solid #e3e5e8; border-radius: 14px; }
 .tab { font: inherit; font-size: 12.5px; font-weight: 700; white-space: nowrap; cursor: pointer; border-radius: 9px; padding: 8px 13px; border: 1px solid #e3e5e8; background: #f7f8f8; color: #555a61; }
@@ -4343,6 +4349,7 @@ button:disabled { opacity: .6; cursor: default; }
                     if (!r.corto && r.demasiadoLargo) {
                         html += '<p class="warn">El enlace pasa de 8 KB y algunos correos o chats lo cortan. Si ocurre, usa «Descargar informe».</p>';
                     }
+                    if (r.publicada) { html += bloqueCorreo(r); }
                     if (salida) { salida.innerHTML = html; }
                     // copia automática cuando la app está publicada
                     if (r.publicada && navigator.clipboard && navigator.clipboard.writeText) {
@@ -4377,6 +4384,7 @@ button:disabled { opacity: .6; cursor: default; }
                             } else { window.prompt('Copia el enlace:', r.urlQuery); }
                         };
                     }
+                enlazarCorreo(r);
                 }).catch(function (err) {
                     boton.textContent = textoOriginal; boton.disabled = false;
                     if (salida) { salida.innerHTML = '<p class="warn">No se ha podido generar el enlace: ' + esc(err.message) + '</p>'; }
@@ -4559,6 +4567,109 @@ button:disabled { opacity: .6; cursor: default; }
         state.vista = 'dashboard';
         render();
         window.scrollTo(0, 0);
+    }
+
+    /* ---------------------------------------------------------------- correo al cliente */
+
+    var CLAVE_CORREO = 'enue_correo_cliente';
+
+    function leerCorreoGuardado() {
+        try { return JSON.parse(localStorage.getItem(CLAVE_CORREO) || '{}') || {}; } catch (e) { return {}; }
+    }
+
+    function guardarCorreo(para, cc) {
+        try { localStorage.setItem(CLAVE_CORREO, JSON.stringify({ para: para, cc: cc })); } catch (e) { }
+    }
+
+    function hayValor(v) { return v !== null && v !== undefined && !isNaN(v); }
+
+    /** Asunto y cuerpo del correo, con el resumen del dashboard y el enlace. */
+    function textoCorreo(url) {
+        var D = datos() || {};
+        var k = DXReport.kpisCabecera(D);
+        var obra = state.identificador || D.identificador || 'la obra';
+        var per = state.periodo || D.periodo || '';
+        var l = [];
+        if (hayValor(k.pem)) { l.push('- Presupuesto: ' + fmtMoney(k.pem)); }
+        if (hayValor(k.cert)) { l.push('- Certificado a origen: ' + fmtMoney(k.cert) + (hayValor(k.pctCert) ? ' (' + fmtPct(k.pctCert) + ')' : '')); }
+        if (hayValor(k.pendCert)) { l.push('- Pendiente de certificar: ' + fmtMoney(k.pendCert)); }
+        if (hayValor(k.pendFact)) { l.push('- Pendiente de facturar: ' + fmtMoney(k.pendFact)); }
+        if (hayValor(k.saldo)) { l.push('- Saldo a favor de ENUE: ' + fmtMoney(k.saldo)); }
+        if (hayValor(k.facturaTotal)) {
+            var num = D.factura && D.factura.ident && D.factura.ident.numero ? D.factura.ident.numero : '';
+            l.push('- Factura de la quincena: ' + fmtMoney(k.facturaTotal) + (num ? ' (nº ' + num + ')' : ''));
+        }
+        var cuerpo = 'Buenos días,\n\n' +
+            'Les remitimos el informe de seguimiento de la obra ' + obra + (per ? ', correspondiente a ' + per : '') + '.\n\n' +
+            (l.length ? 'Resumen:\n' + l.join('\n') + '\n\n' : '') +
+            'Pueden consultar el informe completo en este enlace:\n' + url + '\n\n' +
+            'Quedamos a su disposición para cualquier aclaración.\n\n' +
+            'Un saludo,\nENUE Proyectos y Construcción';
+        return { asunto: 'Seguimiento de obra ' + obra + (per ? ' · ' + per : ''), cuerpo: cuerpo };
+    }
+
+    function bloqueCorreo(r) {
+        var g = leerCorreoGuardado();
+        var t = textoCorreo(r.url);
+        return '<div class="correo-box">' +
+            '<span class="compartir-t">Correo al cliente</span>' +
+            '<p class="nota-pie">Se abre tu correo con el mensaje ya escrito. Lo revisas y lo envías tú desde tu cuenta; la aplicación no envía nada por su cuenta.</p>' +
+            '<label class="correo-lab">Para<input type="text" id="correo-para" placeholder="cliente@empresa.com" value="' + esc(g.para || '') + '"></label>' +
+            '<label class="correo-lab">Con copia (opcional)<input type="text" id="correo-cc" placeholder="direccion@enue.es" value="' + esc(g.cc || '') + '"></label>' +
+            '<label class="correo-lab">Asunto<input type="text" id="correo-asunto" value="' + esc(t.asunto) + '"></label>' +
+            '<label class="correo-lab">Mensaje<textarea id="correo-cuerpo" rows="14">' + esc(t.cuerpo) + '</textarea></label>' +
+            '<div class="chips">' +
+            '<button class="btn-primario" id="btn-correo-mailto">Preparar correo</button>' +
+            '<button class="btn-sec" id="btn-correo-gmail">Abrir en Gmail</button>' +
+            '<button class="btn-sec" id="btn-correo-outlook">Abrir en Outlook web</button>' +
+            '<button class="btn-sec" id="btn-correo-copiar">Copiar texto</button>' +
+            '</div>' +
+            '<p class="nota-pie" id="correo-aviso"></p>' +
+            '</div>';
+    }
+
+    function enlazarCorreo(r) {
+        var bm = $('btn-correo-mailto');
+        if (!bm) { return; }
+        function val(id) { var e = $(id); return e ? e.value.trim() : ''; }
+        function aviso(m) { var a = $('correo-aviso'); if (a) { a.textContent = m; } }
+        function dir(s) { return encodeURIComponent(s.replace(/;/g, ',')).replace(/%2C/g, ',').replace(/%40/g, '@'); }
+        function leer() {
+            var m = { para: val('correo-para'), cc: val('correo-cc'), asunto: val('correo-asunto'), cuerpo: ($('correo-cuerpo') || {}).value || '' };
+            guardarCorreo(m.para, m.cc);
+            return m;
+        }
+        bm.onclick = function () {
+            var m = leer();
+            var u = 'mailto:' + dir(m.para) + '?subject=' + encodeURIComponent(m.asunto) +
+                (m.cc ? '&cc=' + dir(m.cc) : '') +
+                '&body=' + encodeURIComponent(m.cuerpo.replace(/\r?\n/g, '\r\n'));
+            if (u.length > 1900) {
+                aviso('El mensaje es demasiado largo para abrirse en el programa de correo. Usa «Abrir en Gmail», «Abrir en Outlook web» o «Copiar texto».');
+                return;
+            }
+            window.location.href = u;
+            aviso('Si no se ha abierto tu programa de correo, usa «Abrir en Gmail», «Abrir en Outlook web» o «Copiar texto».');
+        };
+        $('btn-correo-gmail').onclick = function () {
+            var m = leer();
+            window.open('https://mail.google.com/mail/?view=cm&fs=1&to=' + dir(m.para) + (m.cc ? '&cc=' + dir(m.cc) : '') +
+                '&su=' + encodeURIComponent(m.asunto) + '&body=' + encodeURIComponent(m.cuerpo), '_blank', 'noopener');
+            aviso('Se ha abierto Gmail en otra pestaña.');
+        };
+        $('btn-correo-outlook').onclick = function () {
+            var m = leer();
+            window.open('https://outlook.office.com/mail/deeplink/compose?to=' + dir(m.para) + (m.cc ? '&cc=' + dir(m.cc) : '') +
+                '&subject=' + encodeURIComponent(m.asunto) + '&body=' + encodeURIComponent(m.cuerpo), '_blank', 'noopener');
+            aviso('Se ha abierto Outlook en otra pestaña. Si usas una cuenta personal (outlook.com), copia el texto y pégalo.');
+        };
+        $('btn-correo-copiar').onclick = function () {
+            var m = leer();
+            var txt = 'Para: ' + m.para + '\n' + (m.cc ? 'CC: ' + m.cc + '\n' : '') + 'Asunto: ' + m.asunto + '\n\n' + m.cuerpo;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(txt).then(function () { aviso('Texto copiado al portapapeles.'); }, function () { window.prompt('Copia el texto:', txt); });
+            } else { window.prompt('Copia el texto:', txt); }
+        };
     }
 
     /** Genera el enlace: corto (guardado en la nube) y, si falla, el largo con los datos dentro. */

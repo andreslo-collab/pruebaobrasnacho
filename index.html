@@ -2389,7 +2389,7 @@ button:disabled { opacity: .6; cursor: default; }
         } else if (restan === 0) {
             txt = 'Vence hoy · límite ' + fechaLim; cls = 'b-amber'; tono = 'ambar'; usado = 100;
         } else {
-            txt = 'Plazo vencido hace ' + (-restan) + (restan === -1 ? ' día' : ' días') + ' · límite ' + fechaLim; cls = 'b-rose'; tono = 'rojo'; usado = 100;
+            txt = 'Fuera de plazo · ' + (-restan) + (restan === -1 ? ' día' : ' días') + ' de descuadre · límite ' + fechaLim; cls = 'b-rose'; tono = 'rojo'; usado = 100;
         }
         return '<span class="plazo-bloque"><span class="plazo-t">Plazo de definición · ' + dias + ' días</span>' +
             barra(usado, cls) + '<span class="plazo-txt plazo-' + tono + '">' + txt + '</span></span>';
@@ -2466,7 +2466,7 @@ button:disabled { opacity: .6; cursor: default; }
             } else if (x.restan === 0) {
                 w = 100; cls = 'ambar'; tono = 'ambar'; txt = 'Vence hoy';
             } else {
-                w = 100; cls = 'rojo'; tono = 'rojo'; txt = 'Vencido hace ' + (-x.restan) + (x.restan === -1 ? ' día' : ' días');
+                w = 100; cls = 'rojo'; tono = 'rojo'; txt = 'Fuera de plazo · ' + (-x.restan) + (x.restan === -1 ? ' día' : ' días') + ' de descuadre';
             }
             return '<div class="pg-fila">' +
                 '<div class="pg-fase"><strong>' + esc(x.fase) + '</strong><span>' + x.dias + ' días · límite ' + fmtF(x.lim) + '</span></div>' +
@@ -4178,6 +4178,20 @@ button:disabled { opacity: .6; cursor: default; }
         return false;
     }
 
+    /** Fecha del contrato (firma): primero la fórmula «En Valencia, a 24 de julio de 2026», después cualquier fecha del encabezado y, si no, la fecha del nombre del archivo. */
+    function fechaContratoISO(lineas, nombre) {
+        var MES = { enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6, julio: 7, agosto: 8, septiembre: 9, setiembre: 9, octubre: 10, noviembre: 11, diciembre: 12 };
+        var p2 = function (n) { return (n < 10 ? '0' : '') + n; };
+        var tx = (lineas || []).slice(0, 80).join(' ').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        var meses = '(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)';
+        var m = tx.match(new RegExp('\\ben\\s+[a-z ]{3,25},?\\s*a\\s+(\\d{1,2})\\s*(?:de\\s+)?' + meses + '\\s*(?:de|del)?\\s*(20\\d{2})'));
+        if (!m) { m = tx.match(new RegExp('(\\d{1,2})\\s*(?:de\\s+)?' + meses + '\\s*(?:de|del)?\\s*(20\\d{2})')); }
+        if (m && +m[1] >= 1 && +m[1] <= 31) { return { iso: m[3] + '-' + p2(MES[m[2]]) + '-' + p2(+m[1]), origen: 'texto del contrato' }; }
+        var f = String(nombre || '').match(/(20\d{2})[-_.](\d{2})[-_.](\d{2})/);
+        if (f && +f[2] >= 1 && +f[2] <= 12 && +f[3] >= 1 && +f[3] <= 31) { return { iso: f[1] + '-' + f[2] + '-' + f[3], origen: 'nombre del archivo' }; }
+        return null;
+    }
+
     async function leerContrato(file, lectura) {
         var porPag = {};
         lectura.lineas.forEach(function (l) { (porPag[l.pagina] = porPag[l.pagina] || []).push(l.texto); });
@@ -4221,6 +4235,8 @@ button:disabled { opacity: .6; cursor: default; }
         res.origen = usoOcr ? 'PDF + OCR' : 'PDF';
         res.numPaginas = n;
         res._lineas = compuesto;
+        var fcon = fechaContratoISO(compuesto, file && file.name);
+        if (fcon) { res.fechaFirma = fcon.iso; res.fechaFirmaOrigen = fcon.origen; }
         if (usoOcr) { res.avisos.unshift('Texto leído por reconocimiento óptico (OCR): comprueba cifras y plazos con el texto de abajo y con el propio contrato.'); }
         if (errOcr) { res.avisos.push('No se pudo completar la lectura por OCR: ' + errOcr + '. Los plazos hay que introducirlos a mano.'); }
         return res;
@@ -4569,6 +4585,19 @@ button:disabled { opacity: .6; cursor: default; }
         var matP = e.excel5;
         if (matP && matP._esLibroDefinicion && (matP.fases || []).length) {
             var pf = state.plazosForm || { firma: '', dias: {} };
+            var conA = e.contrato, notaAuto = '';
+            if (!pf.auto && conA && ((conA.plazosHitos || []).length || conA.fechaFirma)) {
+                var hsA = conA.plazosHitos || [];
+                if (!pf.firma && conA.fechaFirma) { pf.firma = conA.fechaFirma; }
+                if (!pf.dias) { pf.dias = {}; }
+                matP.fases.forEach(function (f, ix) { if (!pf.dias[f.fase] && hsA[ix]) { pf.dias[f.fase] = hsA[ix].dias; } });
+                pf.auto = true; state.plazosForm = pf;
+            }
+            if (conA && (pf.auto || conA.fechaFirma)) {
+                notaAuto = '<div class="val-nota"><strong>Rellenado desde el contrato:</strong> fecha de firma ' + esc(conA.fechaFirma ? conA.fechaFirma.split('-').reverse().join('/') : 'no detectada') +
+                    (conA.fechaFirmaOrigen ? ' (leída del ' + esc(conA.fechaFirmaOrigen) + ')' : '') +
+                    ' y los plazos de cada hito, asignados por orden: hito 1 a la primera fase, hito 2 a la segunda, y así sucesivamente. Compruébalo y corrígelo si hace falta.</div>';
+            }
             var filasP = matP.fases.map(function (f) {
                 var tit = (f.titulo || '').replace(/^FASE\s*\d+\s*-?\s*/i, '').slice(0, 50);
                 return '<label class="plazo-fila"><span>' + esc(f.fase) + (tit ? ' · ' + esc(tit) : '') + '</span>' +
@@ -4580,7 +4609,7 @@ button:disabled { opacity: .6; cursor: default; }
                 '<span class="val-badge">opcional</span></header>' +
                 '<div class="plazo-form"><label class="plazo-fila"><span>Fecha de firma del contrato</span>' +
                 '<input type="date" id="val-plazo-firma" class="val-input" value="' + esc(pf.firma || '') + '"></label>' + filasP + '</div>' +
-                '<div class="val-nota">Días naturales contados desde la firma (1 semana = 7 días). Sin fecha de firma no se muestran las barras.</div></section>');
+                notaAuto + '<div class="val-nota">Días naturales contados desde la firma (1 semana = 7 días). Sin fecha de firma no se muestran las barras.</div></section>');
         }
 
         // ---------- contrato (cláusula 3.1)
@@ -5182,6 +5211,7 @@ button:disabled { opacity: .6; cursor: default; }
     /* ------------------------------------------------------------- procesamiento */
 
     async function procesar() {
+        state.plazosForm = null;
         // El nombre de la obra y la quincena se deducen de los documentos: no se pide nada.
         if (!Object.keys(state.archivos).length && !Object.keys(state.textos).filter(function (k) { return (state.textos[k] || '').trim(); }).length) {
             alert('Carga al menos un documento o pega su texto.');

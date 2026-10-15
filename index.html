@@ -540,6 +540,16 @@ button:disabled { opacity: .6; cursor: default; }
   .se-pp + .se-pp { padding-left: 0; margin-top: 14px; }
   .se-sc-pend2 > div + div { padding-left: 0; margin-top: 12px; }
 }
+.fac-nota { text-align: center; font-size: 12.5px; color: #3f4349; margin: 2px 0 16px; font-style: italic; }
+.fac-tabla-w { overflow-x: auto; }
+.fac-tabla { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.fac-tabla th { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: #6b7076; font-weight: 700; text-align: right; padding: 10px 8px; border-bottom: 1px solid #e3e5e7; white-space: nowrap; }
+.fac-tabla td { font-size: 14px; text-align: right; padding: 14px 8px; height: 56px; color: #1d2023; font-variant-numeric: tabular-nums; border-bottom: 1px solid #e3e5e7; }
+.fac-tabla th.tot, .fac-tabla td.tot { width: 19%; background: #0b0c0d; border-bottom-color: #0b0c0d; }
+.fac-tabla th.tot { color: #d4d6d8; }
+.fac-tabla td.tot { color: #fff; font-size: 24px; font-weight: 800; letter-spacing: -.01em; }
+@media (max-width: 960px) { .fac-tabla { min-width: 900px; } }
+@media print { .fac-tabla th.tot, .fac-tabla td.tot { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 /*__CSS_FIN__*/
 </style>
 </head>
@@ -1338,7 +1348,7 @@ button:disabled { opacity: .6; cursor: default; }
         { key: 'anticipoInicial', label: 'Anticipo inicial / Previsión de fondos', re: /^(?:anticipo\s*inicial|anticipo\s*inicial\s*\/\s*previsi[oó]n\s*de\s*fondos|previsi[oó]n\s*de\s*fondos)/i },
         { key: 'anticipoPendiente', label: 'Anticipo pendiente', re: /^pendiente\s*:/i },
         { key: 'descontado', label: 'Anticipo descontado', re: /^descontado/i },
-        { key: 'totalSaldoFavorEnue', label: 'Total saldo a favor de ENUE', re: /^total\s*saldo\s*a\s*favor\s*de\s*enue/i }
+        { key: 'totalSaldoFavorEnue', label: 'Total saldo pendiente de pago', re: /^total\s*saldo\s*a\s*favor\s*de\s*enue/i }
     ];
 
     function parseTracking(lines, opts) {
@@ -1415,6 +1425,7 @@ button:disabled { opacity: .6; cursor: default; }
             tipo: 'factura',
             ident: { numero: null, fecha: null, cliente: null, cif: null },
             totales: { base: null, ivaPct: null, iva: null, total: null },
+            pie: { pctRE: null, cuotaRE: null, suplidos: null, irpf: null, pctIRPF: null, pctRT: null, retGat: null, nota: null },
             avisos: []
         };
         var m = text.match(/(?:Factura|Fra\.?|N[ºo°]\s*Factura)\s*:?\s*(?:n[ºo°]?\s*)?([A-Z0-9][A-Z0-9._\/-]{1,24})/i);
@@ -1450,6 +1461,18 @@ button:disabled { opacity: .6; cursor: default; }
         if (res.totales.total == null) {
             res.avisos.push('No se ha identificado el total de la factura.');
         }
+        res.pie.nota = (function () {
+            var cand = [], ult = lines.slice(Math.max(0, lines.length - 30));
+            ult.forEach(function (l) {
+                var t = clean(l);
+                if (!t) { return; }
+                if (/^(aplicaci[oó]n|inversi[oó]n|operaci[oó]n|exenci[oó]n|exent[oa]|iva\s+(?:reducido|exento|superreducido))/i.test(t) ||
+                    /Real\s+Decreto|\bArt(?:\.|[ií]culo)\s*\d|\bLey\s+\d+\/\d{4}/i.test(t)) {
+                    if (cand.indexOf(t) < 0) { cand.push(t); }
+                }
+            });
+            return cand.length ? cand.slice(0, 2).join(' ') : null;
+        })();
         if (looksGarbled(lines)) {
             res.avisoGrave = 'El texto de esta factura no se ha podido leer: el PDF usa una fuente con ' +
                 'codificación propia que el lector no sabe mapear. Abre el PDF, copia el texto y pégalo ' +
@@ -2337,7 +2360,7 @@ button:disabled { opacity: .6; cursor: default; }
             kpi('Total certificado', fmtMoney(k.cert), k.certTotal ? 'con IVA: ' + fmtMoney(k.certTotal) : null) +
             kpiPar('Pendiente de certificar', fmtMoney(k.pendCert), 'según ficha de seguimiento', 'Pendiente de facturar', fmtMoney(k.pendFact), 'según ficha de seguimiento') +
             '' +
-            kpi('Saldo a favor de ENUE', fmtMoney(k.saldo), 'facturado − cobrado', 'k-saldo') +
+            kpi('Saldo pendiente de pago', fmtMoney(k.saldo), 'facturado − cobrado', 'k-saldo') +
             kpi('Factura de la quincena', fmtMoney(k.facturaTotal),
                 D.factura && D.factura.ident && D.factura.ident.numero ? 'nº ' + D.factura.ident.numero : null) +
             '</div>';
@@ -2496,7 +2519,7 @@ button:disabled { opacity: .6; cursor: default; }
         if (f) { nav.push(['se-facturas', 'Factura y cobros']); }
         if (caps.length) { nav.push(['se-cert', 'Certificación a origen']); }
         /* el anticipo no se destaca en la navegación */
-        if (saldo !== null) { nav.push(['se-saldo', 'Saldo a favor de ENUE']); }
+        if (saldo !== null) { nav.push(['se-saldo', 'Saldo pendiente de pago']); }
 
         var h = '<div class="se">';
 
@@ -2515,7 +2538,7 @@ button:disabled { opacity: .6; cursor: default; }
             card('Facturación emitida', mon(emit), 'se-c-pri', pagos !== null ? '<span>Pagos recibidos:</span><strong>' + fmtMoney(pagos) + '</strong>' : '') +
             cardPar('Pendiente de certificar', mon(pendCert), pieFicha('pendienteCertificar', pendCert), 'Pendiente de facturar', mon(pendFact), pieFicha('pendienteFacturar', pendFact)) +
             '' +
-            (saldo !== null ? '<div class="se-card se-c-red"><div class="se-card-in"><span class="se-card-t">Saldo actual a favor de ENUE</span>' +
+            (saldo !== null ? '<div class="se-card se-c-red"><div class="se-card-in"><span class="se-card-t">Saldo actual pendiente de pago</span>' +
                 '<div class="se-card-v">' + esc(fmtMoney(saldo)) + '</div>' +
                 '<div class="se-card-p"><span>' + (fi.numero ? 'Factura ' + esc(fi.numero) : 'Según ficha de seguimiento') + '</span></div></div></div>' : '') +
             '</div>';
@@ -2540,7 +2563,7 @@ button:disabled { opacity: .6; cursor: default; }
             '<div class="se-q"><span class="se-q-t">Hito 1 · Obra ejecutada</span><p>' +
                 (ejec !== null ? 'La obra certificada alcanza <b class="ok">' + esc(fmtMoney(ejec)) + '</b>.' : 'No se ha podido leer la obra certificada.') + '</p><small>' + esc(capsTxt) + '</small></div>' +
             '<div class="se-q rojo"><span class="se-q-t">Hito 2 · Saldo pendiente</span><p>' +
-                (saldo !== null ? 'El saldo a favor de ENUE es <b class="rj">' + esc(fmtMoney(saldo)) + '</b>' + (fi.numero ? ' (factura ' + esc(fi.numero) + ').' : '.') : 'No se ha podido leer el saldo.') + '</p>' +
+                (saldo !== null ? 'El saldo pendiente de pago es <b class="rj">' + esc(fmtMoney(saldo)) + '</b>' + (fi.numero ? ' (factura ' + esc(fi.numero) + ').' : '.') : 'No se ha podido leer el saldo.') + '</p>' +
                 '<small>Según la ficha de seguimiento económico.</small></div>' +
             '<div class="se-q"><span class="se-q-t">Hito 3 · Margen restante</span><p>' +
                 (pendCert !== null ? 'Queda pendiente de certificar <b class="pr">' + esc(fmtMoney(pendCert)) + '</b>' + (conIva(pendCert) !== null ? ' (con IVA: ' + esc(fmtMoney(conIva(pendCert))) + ').' : '.') : 'No se ha podido leer lo pendiente de certificar.') + '</p>' +
@@ -2627,7 +2650,7 @@ button:disabled { opacity: .6; cursor: default; }
             } else { txtSaldo = 'Importe leído de la ficha de seguimiento económico.'; }
             h += '<section class="se-sec" id="se-saldo">' +
                 cab('Bloque 05', 'Estado de liquidación y saldo pendiente', 'Importe pendiente de regularización correspondiente al hito actual', '', true) +
-                '<div class="se-red"><div class="se-red-h"><div><span>Posición acreedora actual</span><h3>TOTAL SALDO A FAVOR DE ENUE</h3></div>' +
+                '<div class="se-red"><div class="se-red-h"><div><span>Situación actual</span><h3>TOTAL SALDO PENDIENTE DE PAGO</h3></div>' +
                 '<div class="se-red-v">' + esc(fmtMoney(saldo)) + '</div></div><p>' + txtSaldo + '</p></div>' +
                 '<div class="se-2b">' +
                 '<div class="se-panel se-sc se-sc-pend2"><div><span>Pendiente de certificar</span><b>' + esc(mon(pendCert)) + '</b>' + (conIva(pendCert) !== null ? '<small>Con IVA: ' + esc(fmtMoney(conIva(pendCert))) + '</small>' : '') + '</div>' +
@@ -2652,21 +2675,38 @@ button:disabled { opacity: .6; cursor: default; }
     function tabFacturacion(D) {
         var f = D.factura, k = kpisCabecera(D);
         if (!f) { return sinDatos('Factura no disponible', 'Carga el PDF 4 (factura de la quincena).'); }
+        var t = f.totales || {}, p = f.pie || {}, idn = f.ident || {};
+        var pctIva = (t.ivaPct === null || t.ivaPct === undefined) ? '—' : fmtNum(t.ivaPct, 2) + ' %';
         var html = '<div class="kpis">' +
-            kpi('Base imponible', fmtMoney(f.totales.base)) +
-            kpi('Tipo de IVA', f.totales.ivaPct === null ? '—' : fmtNum(f.totales.ivaPct, 2) + ' %') +
-            kpi('Cuota de IVA', fmtMoney(f.totales.iva)) +
-            kpi('Total factura', fmtMoney(f.totales.total), null, 'k-green') +
+            kpi('Base imponible', fmtMoney(t.base)) +
+            kpi('Tipo de IVA', pctIva) +
+            kpi('Cuota de IVA', fmtMoney(t.iva)) +
+            kpi('Total a abonar (IVA incluido)', fmtMoney(t.total), 'importe que debe abonar el cliente', 'k-green') +
             '</div>';
         html += '<div class="bloque">' + filaCabecera('Datos de la factura', 'Identificación fiscal de la factura emitida.') +
-            '<div class="datos-ident"><span>Nº: <strong>' + esc(f.ident.numero || '—') + '</strong></span>' +
-            '<span>Fecha: <strong>' + esc(f.ident.fecha || '—') + '</strong></span>' +
-            '<span>Cliente: <strong>' + esc(f.ident.cliente || '—') + '</strong></span>' +
-            '<span>CIF: <strong>' + esc(f.ident.cif || '—') + '</strong></span></div>';
+            '<div class="datos-ident"><span>Nº: <strong>' + esc(idn.numero || '—') + '</strong></span>' +
+            '<span>Fecha: <strong>' + esc(idn.fecha || '—') + '</strong></span>' +
+            '<span>Cliente: <strong>' + esc(idn.cliente || '—') + '</strong></span>' +
+            '<span>CIF: <strong>' + esc(idn.cif || '—') + '</strong></span></div>';
         if (k.saldo !== null) {
-            html += '<p class="formula">Saldo pendiente a favor de ENUE: <strong>' + fmtMoney(k.saldo) + '</strong> (según ficha de seguimiento).</p>';
+            html += '<p class="formula">Saldo pendiente de pago: <strong>' + fmtMoney(k.saldo) + '</strong> (según ficha de seguimiento).</p>';
         }
-        return html + '</div>';
+        html += '</div>';
+        var cel = function (v) { return (v === null || v === undefined || isNaN(v)) ? '' : fmtNum(v, 2); };
+        var cols = [
+            ['Base', cel(t.base), ''], ['% IVA', cel(t.ivaPct), ''], ['Cuota IVA', cel(t.iva), ''],
+            ['% RE', cel(p.pctRE), ''], ['Cuota RE', cel(p.cuotaRE), ''], ['Cuota Suplidos', cel(p.suplidos), ''],
+            ['IRPF', cel(p.irpf), ''], ['% IRPF', cel(p.pctIRPF), ''], ['% RT', cel(p.pctRT), ''], ['RET. GAT.', cel(p.retGat), ''],
+            ['TOTAL FACTURA', (t.total === null || t.total === undefined || isNaN(t.total)) ? '' : fmtMoney(t.total), 'tot']
+        ];
+        html += '<div class="bloque fac-pie">' + filaCabecera('Pie de la factura', 'Desglose fiscal tal como figura al final de la factura.') +
+            (p.nota ? '<p class="fac-nota">' + esc(p.nota) + '</p>' : '') +
+            '<div class="fac-tabla-w"><table class="fac-tabla"><thead><tr>' +
+            cols.map(function (c) { return '<th' + (c[2] ? ' class="' + c[2] + '"' : '') + '>' + esc(c[0]) + '</th>'; }).join('') +
+            '</tr></thead><tbody><tr>' +
+            cols.map(function (c) { return '<td' + (c[2] ? ' class="' + c[2] + '"' : '') + '>' + esc(c[1]) + '</td>'; }).join('') +
+            '</tr></tbody></table></div></div>';
+        return html;
     }
 
     function tabDefMateriales(D, filtros) {
@@ -3587,6 +3627,93 @@ button:disabled { opacity: .6; cursor: default; }
         return out;
     }
 
+    /* ---- Pie de la factura (Base, % IVA, Cuota IVA ... TOTAL FACTURA), leído por coordenadas ---- */
+    function leerPieFactura(crudos) {
+        var ETQ = [
+            ['base', ['base', 'baseimponible']], ['ivaPct', ['%iva']], ['iva', ['cuotaiva']],
+            ['pctRE', ['%re']], ['cuotaRE', ['cuotare']], ['suplidos', ['cuotasuplidos', 'suplidos']],
+            ['irpf', ['irpf']], ['pctIRPF', ['%irpf']], ['pctRT', ['%rt']],
+            ['retGat', ['retgat']], ['total', ['totalfactura']]
+        ];
+        var norm = function (t) { return String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '').replace(/\./g, ''); };
+        var RE_NUM = /^-?\d{1,3}(?:\.\d{3})*,\d{1,2}\s*€?$|^-?\d+,\d{1,2}\s*€?$/;
+        var toNum = function (t) { return parseFloat(String(t).replace(/[€\s]/g, '').replace(/\./g, '').replace(',', '.')); };
+        var paginas = {};
+        (crudos || []).forEach(function (c) { if (c.s && String(c.s).trim()) { (paginas[c.p] = paginas[c.p] || []).push(c); } });
+        var claves = Object.keys(paginas).map(Number).sort(function (a, b) { return b - a; });
+        for (var pi = 0; pi < claves.length; pi++) {
+            var its = paginas[claves[pi]];
+            var cands = its.filter(function (c) { var n = norm(c.s); return n === 'base' || n === 'baseimponible'; })
+                .sort(function (a, b) { return a.y - b.y; });
+            for (var ci = 0; ci < cands.length; ci++) {
+                var h = cands[ci];
+                var fila = its.filter(function (c) { return Math.abs(c.y - h.y) <= 6; }).sort(function (a, b) { return a.x - b.x; });
+                var cols = [], usados = {}, i = 0;
+                while (i < fila.length) {
+                    var hallado = false;
+                    for (var n = 4; n >= 1 && !hallado; n--) {
+                        if (i + n > fila.length) { continue; }
+                        var junto = fila.slice(i, i + n).map(function (c) { return norm(c.s); }).join('');
+                        for (var e = 0; e < ETQ.length; e++) {
+                            if (!usados[ETQ[e][0]] && ETQ[e][1].indexOf(junto) >= 0) {
+                                var g = fila.slice(i, i + n), ult = g[g.length - 1];
+                                cols.push({ k: ETQ[e][0], x0: g[0].x, x1: ult.x + (ult.w || 0) });
+                                usados[ETQ[e][0]] = true; hallado = true; i += n; break;
+                            }
+                        }
+                    }
+                    if (!hallado) { i++; }
+                }
+                if (cols.length < 4 || !usados.base || !(usados.total || usados.iva)) { continue; }
+                var minX = Math.min.apply(null, cols.map(function (c) { return c.x0; })) - 40;
+                var maxX = Math.max.apply(null, cols.map(function (c) { return c.x1; })) + 40;
+                var numericos = its.filter(function (c) {
+                    return RE_NUM.test(String(c.s).trim()) && c.y < h.y - 0.5 && h.y - c.y < 70 && c.x + (c.w || 0) >= minX && c.x <= maxX;
+                });
+                if (!numericos.length) { continue; }
+                var rowY = Math.max.apply(null, numericos.map(function (c) { return c.y; }));
+                var banda = numericos.filter(function (c) { return Math.abs(c.y - rowY) <= 10; });
+                var valores = {}, dist = {};
+                banda.forEach(function (c) {
+                    var ic = c.x + (c.w || 0) / 2, ir = c.x + (c.w || 0), mejor = null, dm = 1e9;
+                    cols.forEach(function (col) {
+                        var d = Math.min(Math.abs(ic - (col.x0 + col.x1) / 2), Math.abs(ir - col.x1));
+                        if (d < dm) { dm = d; mejor = col.k; }
+                    });
+                    if (mejor && dm <= 40 && (dist[mejor] === undefined || dm < dist[mejor])) { dist[mejor] = dm; valores[mejor] = toNum(c.s); }
+                });
+                return { valores: valores, columnas: cols.length };
+            }
+        }
+        return null;
+    }
+
+    function aplicarPieFactura(res, crudos) {
+        res.avisos = res.avisos || [];
+        res.pie = res.pie || {};
+        var o = leerPieFactura(crudos);
+        if (!o) {
+            res.avisos.push('No se ha encontrado el pie de la factura (Base, % IVA, Cuota IVA … TOTAL FACTURA). Revisa los importes a mano.');
+            return;
+        }
+        var v = o.valores;
+        ['pctRE', 'cuotaRE', 'suplidos', 'irpf', 'pctIRPF', 'pctRT', 'retGat'].forEach(function (k) {
+            res.pie[k] = (v[k] !== undefined && !isNaN(v[k])) ? v[k] : null;
+        });
+        if (v.total != null && v.base != null && v.iva != null) {
+            var extra = (v.cuotaRE || 0) + (v.suplidos || 0) - (v.irpf || 0) - (v.retGat || 0);
+            var cuadra = Math.abs(v.base + v.iva - v.total) <= 0.05 || Math.abs(v.base + v.iva + extra - v.total) <= 0.05;
+            if (cuadra) {
+                res.totales.base = v.base; res.totales.iva = v.iva; res.totales.total = v.total;
+                if (v.ivaPct != null) { res.totales.ivaPct = v.ivaPct; }
+            } else {
+                res.avisos.push('El pie de la factura no cuadra (Base + IVA ≠ Total factura). Revisa los importes.');
+            }
+        } else if (v.total == null) {
+            res.avisos.push('No se ha podido leer el TOTAL FACTURA del pie. Revisa el importe a mano.');
+        }
+    }
+
     function aplicarDetalleFicha(res, crudos) {
         var o = leerDetalleFicha(crudos);
         res.avisos = res.avisos || [];
@@ -3649,6 +3776,7 @@ button:disabled { opacity: .6; cursor: default; }
             var res = parsearCon(zona.parser, soloTexto(lectura.lineas), { origen: 'PDF', numPaginas: lectura.numPaginas });
             res._lineas = soloTexto(lectura.lineas);
             if (zona.parser === 'seguimiento') { try { aplicarDetalleFicha(res, lectura.crudos); } catch (eDet) { (res.avisos = res.avisos || []).push('No se pudo leer la tabla Detalle obra ejecutada: ' + eDet.message); } }
+            if (zona.parser === 'factura') { try { aplicarPieFactura(res, lectura.crudos); } catch (ePie) { (res.avisos = res.avisos || []).push('No se pudo leer el pie de la factura: ' + ePie.message); } }
             return res;
         }
         if (zona.tipo === 'hoja' || /\.(xlsx|xls|csv)$/.test(nombre)) {
@@ -3871,7 +3999,7 @@ button:disabled { opacity: .6; cursor: default; }
                     ['anticipoInicial', 'Anticipo inicial / previsión de fondos'],
                     ['descontado', 'Descontado'],
                     ['anticipoPendiente', 'Pendiente de amortizar'],
-                    ['totalSaldoFavorEnue', 'TOTAL saldo a favor de ENUE'],
+                    ['totalSaldoFavorEnue', 'TOTAL saldo pendiente de pago'],
                     ['facturasEmitidas', 'Facturas emitidas'],
                     ['pagosRecibidos', 'Pagos recibidos']
                 ];
@@ -3894,7 +4022,7 @@ button:disabled { opacity: .6; cursor: default; }
         var fac = e.pdf4;
         if (fac && fac.tipo === 'factura') {
             try {
-                var ftot = fac.totales || {}, fident = fac.ident || {};
+                var ftot = fac.totales || {}, fident = fac.ident || {}, fpie = fac.pie || {};
                 var cuerpoF = '<div class="val-grid-4">' +
                     '<label class="val-field"><span>Nº factura</span>' + inputNum(fident.numero, 'ident.numero', 'pdf4') + '</label>' +
                     '<label class="val-field"><span>Fecha</span>' + inputNum(fident.fecha, 'ident.fecha', 'pdf4') + '</label>' +
@@ -3903,7 +4031,15 @@ button:disabled { opacity: .6; cursor: default; }
                     '<label class="val-field"><span>Base imponible</span>' + inputNum(ftot.base, 'totales.base', 'pdf4') + '</label>' +
                     '<label class="val-field"><span>Tipo de IVA (%)</span>' + inputNum(ftot.ivaPct, 'totales.ivaPct', 'pdf4') + '</label>' +
                     '<label class="val-field"><span>Cuota de IVA</span>' + inputNum(ftot.iva, 'totales.iva', 'pdf4') + '</label>' +
-                    '<label class="val-field destacado"><span>Total factura</span>' + inputNum(ftot.total, 'totales.total', 'pdf4') + '</label>' +
+                    '<label class="val-field destacado"><span>Total factura (con IVA)</span>' + inputNum(ftot.total, 'totales.total', 'pdf4') + '</label>' +
+                    '<label class="val-field"><span>% RE</span>' + inputNum(fpie.pctRE, 'pie.pctRE', 'pdf4') + '</label>' +
+                    '<label class="val-field"><span>Cuota RE</span>' + inputNum(fpie.cuotaRE, 'pie.cuotaRE', 'pdf4') + '</label>' +
+                    '<label class="val-field"><span>Cuota suplidos</span>' + inputNum(fpie.suplidos, 'pie.suplidos', 'pdf4') + '</label>' +
+                    '<label class="val-field"><span>IRPF</span>' + inputNum(fpie.irpf, 'pie.irpf', 'pdf4') + '</label>' +
+                    '<label class="val-field"><span>% IRPF</span>' + inputNum(fpie.pctIRPF, 'pie.pctIRPF', 'pdf4') + '</label>' +
+                    '<label class="val-field"><span>% RT</span>' + inputNum(fpie.pctRT, 'pie.pctRT', 'pdf4') + '</label>' +
+                    '<label class="val-field"><span>RET. GAT.</span>' + inputNum(fpie.retGat, 'pie.retGat', 'pdf4') + '</label>' +
+                    (fpie.nota ? '<div class="val-nota" style="grid-column:1/-1">Texto legal leído: <strong>' + esc(fpie.nota) + '</strong></div>' : '') +
                     '</div>';
                 partes.push(tarjetaCabecera('Factura de la quincena (PDF 4)', 'Datos fiscales de la factura emitida.', cuerpoF, fac, 'pdf4'));
             } catch (err) { partes.push(bloqueFallo('Factura de la quincena (PDF 4)', fac, err)); }
@@ -4622,6 +4758,8 @@ button:disabled { opacity: .6; cursor: default; }
     function importeFacturaConIva(D) {
         var f = (D.factura && D.factura.totales) || {};
         var c = (D.certificacion && D.certificacion.totales) || {};
+        // 0) Prioridad: "Total con IVA" de la certificación (PDF 1), el mismo que se ve en la validación
+        if (hayValor(c.total) && c.total > 0) { return { valor: c.total, seguro: true }; }
         var pct = hayValor(f.ivaPct) ? f.ivaPct : (hayValor(c.ivaPct) ? c.ivaPct : null);
         var r2 = function (x) { return Math.round(x * 100) / 100; };
         var casi = function (a, b) { return hayValor(a) && hayValor(b) && Math.abs(a - b) < 0.02; };

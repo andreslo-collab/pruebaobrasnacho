@@ -3977,6 +3977,7 @@ button:disabled { opacity: .6; cursor: default; }
         }
         if (zona.tipo === 'pdf' || /\.pdf$/.test(nombre)) {
             var lectura = await leerPdf(file);
+            if (zona.parser === 'contrato') { return await leerContrato(file, lectura); }
             var res = parsearCon(zona.parser, soloTexto(lectura.lineas), { origen: 'PDF', numPaginas: lectura.numPaginas });
             res._lineas = soloTexto(lectura.lineas);
             if (zona.parser === 'seguimiento') { try { aplicarDetalleFicha(res, lectura.crudos); } catch (eDet) { (res.avisos = res.avisos || []).push('No se pudo leer la tabla Detalle obra ejecutada: ' + eDet.message); } }
@@ -4011,34 +4012,152 @@ button:disabled { opacity: .6; cursor: default; }
 
     /* ---- Contrato: cláusula 3.1 «Plazos de ejecución de obra» ---- */
     function parsearContrato(lineas, opts) {
-        var ls = (lineas || []).map(function (t) { return String(t).trim(); }).filter(Boolean);
-        var r = { tipo: 'contrato', avisos: [], clausula31: [], hayClausula31: false, semanasTotal: null, mencionaMateriales: false };
+        opts = opts || {};
+        var ls = (lineas || []).map(function (t) { return String(t).replace(/^[\s|\[\]·•]+/, '').trim(); }).filter(Boolean);
+        var r = { tipo: 'contrato', avisos: [], clausula31: [], clausula3: [], plazosHitos: [], hayClausula31: false, semanasTotal: null, mencionaMateriales: false };
         var texto = ls.join(' ');
-        if (ls.length < 25 || texto.length < 1500) {
+        if (!opts.ocr && (ls.length < 25 || texto.length < 1500)) {
             r.avisos.push('El PDF del contrato no tiene texto legible (probablemente está escaneado). Los plazos de definición de materiales hay que introducirlos a mano, si el contrato los fija.');
             return r;
         }
-        var mejor = [];
-        for (var i = 0; i < ls.length; i++) {
-            if (!/^3\.1(?![\d])/.test(ls[i])) { continue; }
+        var RE31 = /^3\s*[.,]\s*1(?!\d)/, REF = /^3\s*[.,]\s*[2-9](?!\d)/, RE3H = /^3\s*[.\-)]\s*plazos?\b/i, RE4 = /^4\s*[.\-)]\s*[A-ZÁÉÍÓÚÑ]/;
+        var mejor = [], mejorIni = -1, i, j;
+        for (i = 0; i < ls.length; i++) {
+            if (!RE31.test(ls[i])) { continue; }
             var tr = [ls[i]];
-            for (var j = i + 1; j < ls.length && tr.length < 30; j++) {
-                if (/^3\.[2-9](?![\d])/.test(ls[j]) || /^4\s*[.\-)]\s*\S/.test(ls[j])) { break; }
+            for (j = i + 1; j < ls.length && tr.length < 40; j++) {
+                if (REF.test(ls[j]) || RE4.test(ls[j])) { break; }
                 tr.push(ls[j]);
             }
-            if (tr.join(' ').length > mejor.join(' ').length) { mejor = tr; }
+            if (tr.join(' ').length > mejor.join(' ').length) { mejor = tr; mejorIni = i; }
+        }
+        var ini3 = mejorIni, k;
+        if (mejorIni >= 0) {
+            for (k = Math.max(0, mejorIni - 3); k <= mejorIni; k++) { if (RE3H.test(ls[k])) { ini3 = k; break; } }
+        } else {
+            for (k = 0; k < ls.length; k++) { if (RE3H.test(ls[k])) { ini3 = k; break; } }
+        }
+        var c3 = [];
+        if (ini3 >= 0) {
+            for (k = ini3; k < ls.length && c3.length < 90; k++) {
+                if (k > ini3 && RE4.test(ls[k])) { break; }
+                c3.push(ls[k]);
+            }
         }
         if (mejor.join(' ').length < 60) {
-            r.avisos.push('No se ha encontrado la cláusula 3.1 en el contrato. Si no hay cláusula 3.1, el contrato no fija plazos y no se mostrarán barras de plazo.');
-            return r;
+            if (c3.join(' ').length >= 80) {
+                mejor = c3.slice(0, 40);
+                r.avisos.push('No se ha localizado la numeración «3.1»; se muestra la cláusula «3. Plazos de ejecución de obra».');
+            } else {
+                r.avisos.push('No se ha encontrado la cláusula 3.1 en el contrato. Si no hay cláusula 3.1, el contrato no fija plazos y no se mostrarán barras de plazo.');
+                return r;
+            }
         }
         r.hayClausula31 = true;
         r.clausula31 = mejor;
+        r.clausula3 = c3.length > mejor.length ? c3 : mejor;
         var tx = mejor.join(' ');
         var m = tx.match(/(\d{1,3})\s*semanas/i);
         if (m) { r.semanasTotal = parseInt(m[1], 10); }
-        r.mencionaMateriales = /(selecci|definici|elecci)/i.test(tx);
+        var tx3 = r.clausula3.join(' ');
+        r.mencionaMateriales = /(selecci|definici|elecci)/i.test(tx3);
+        var re = /(\d{1,3})\)?\s*(d[ií]as?(?:\s+(?:naturales|h[aá]biles))?|semanas?)/gi, mm, saltado = false;
+        while ((mm = re.exec(tx3)) !== null) {
+            var n = parseInt(mm[1], 10), sem = /^sem/i.test(mm[2]);
+            if (!saltado && sem && r.semanasTotal !== null && n === r.semanasTotal) { saltado = true; continue; }
+            if (!(n > 0)) { continue; }
+            r.plazosHitos.push({ n: n, unidad: sem ? 'semanas' : 'dias', dias: sem ? n * 7 : n });
+        }
         return r;
+    }
+
+    /* ---- OCR del contrato (páginas escaneadas) ---- */
+    var tesseractCargado = null;
+    async function asegurarTesseract() {
+        if (tesseractCargado) { return tesseractCargado; }
+        if (window.Tesseract) { tesseractCargado = window.Tesseract; return tesseractCargado; }
+        var urls = ['https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js', 'https://unpkg.com/tesseract.js@5.1.1/dist/tesseract.min.js'];
+        for (var i = 0; i < urls.length; i++) {
+            try {
+                await cargarScript(urls[i], 25000);
+                if (window.Tesseract) { tesseractCargado = window.Tesseract; return tesseractCargado; }
+            } catch (e) { /* siguiente CDN */ }
+        }
+        return null;
+    }
+
+    async function ocrPagina(pdf, worker, p) {
+        var page = await pdf.getPage(p);
+        var vp = page.getViewport({ scale: 2.4 });
+        var cv = document.createElement('canvas');
+        cv.width = Math.floor(vp.width); cv.height = Math.floor(vp.height);
+        var ctx = cv.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, cv.width, cv.height);
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        var rs = await worker.recognize(cv);
+        cv.width = 0; cv.height = 0;
+        return String((rs && rs.data && rs.data.text) || '').split(/\r?\n/).map(function (t) { return t.trim(); }).filter(Boolean);
+    }
+
+    /** Indica si, con las páginas leídas hasta ahora, ya está completa la cláusula 3 (hay un 3.1 y después un epígrafe 4). */
+    function clausula3Completa(ls) {
+        var i31 = -1, i;
+        for (i = 0; i < ls.length; i++) { if (/^3\s*[.,]\s*1(?!\d)/.test(ls[i])) { i31 = i; break; } }
+        if (i31 < 0) { return false; }
+        var largo = 0;
+        for (i = i31 + 1; i < ls.length; i++) {
+            if (largo > 400 && /^4\s*[.\-)]\s*[A-ZÁÉÍÓÚÑ]/.test(ls[i])) { return true; }
+            largo += ls[i].length;
+        }
+        return false;
+    }
+
+    async function leerContrato(file, lectura) {
+        var porPag = {};
+        lectura.lineas.forEach(function (l) { (porPag[l.pagina] = porPag[l.pagina] || []).push(l.texto); });
+        var n = lectura.numPaginas || 0, tope = Math.min(n, 16);
+        function esImagen(p) {
+            var t = (porPag[p] || []).join(' ').replace(/zapsign/ig, '').replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/ig, '');
+            return t.replace(/\s+/g, '').length < 60;
+        }
+        var compuesto = [], usoOcr = false, errOcr = '', worker = null, pdf = null, p, q;
+        try {
+            for (p = 1; p <= n; p++) {
+                var lp = porPag[p] || [];
+                if (p <= tope && !errOcr && esImagen(p)) {
+                    try {
+                        if (!worker) {
+                            state.ocrMsg = 'Cargando el lector de texto en imágenes (OCR)… la primera vez tarda unos segundos.';
+                            render();
+                            var T = await asegurarTesseract();
+                            if (!T) { throw new Error('no se ha podido cargar el OCR (¿sin conexión a internet?)'); }
+                            worker = await T.createWorker('spa');
+                            var lib = await asegurarPdfJs();
+                            pdf = await lib.getDocument({ data: await file.arrayBuffer() }).promise;
+                        }
+                        state.ocrMsg = 'Leyendo el contrato por OCR · página ' + p + ' de ' + tope + '…';
+                        render();
+                        lp = await ocrPagina(pdf, worker, p);
+                        usoOcr = true;
+                    } catch (eo) { errOcr = (eo && eo.message) || String(eo); }
+                }
+                compuesto = compuesto.concat(lp);
+                if (usoOcr && clausula3Completa(compuesto)) {
+                    for (q = p + 1; q <= n; q++) { compuesto = compuesto.concat(porPag[q] || []); }
+                    break;
+                }
+            }
+        } finally {
+            if (worker) { try { await worker.terminate(); } catch (et) { /* nada */ } }
+            state.ocrMsg = '';
+        }
+        var res = parsearContrato(compuesto, { ocr: usoOcr });
+        res.origen = usoOcr ? 'PDF + OCR' : 'PDF';
+        res.numPaginas = n;
+        res._lineas = compuesto;
+        if (usoOcr) { res.avisos.unshift('Texto leído por reconocimiento óptico (OCR): comprueba cifras y plazos con el texto de abajo y con el propio contrato.'); }
+        if (errOcr) { res.avisos.push('No se pudo completar la lectura por OCR: ' + errOcr + '. Los plazos hay que introducirlos a mano.'); }
+        return res;
     }
 
     /* ---- Carga múltiple: reparto automático de archivos en sus casillas ---- */
@@ -4075,10 +4194,15 @@ button:disabled { opacity: .6; cursor: default; }
     async function colocarArchivos(lista) {
         state.multiSinAsignar = state.multiSinAsignar || [];
         var colocados = 0;
+        state.multiMsg = 'Reconociendo ' + lista.length + ' archivo(s)…';
+        state.vista = 'generador';
+        render();
         for (var i = 0; i < lista.length; i++) {
-            var f = lista[i];
-            var z = zonaPorNombre(f.name);
-            if (!z && /\.pdf$/i.test(f.name)) { try { z = await zonaPorTexto(f); } catch (e) { z = null; } }
+            var f = lista[i], z = null;
+            try {
+                z = zonaPorNombre(f.name);
+                if (!z && /\.pdf$/i.test(f.name)) { z = await zonaPorTexto(f); }
+            } catch (e) { z = null; }
             if (z && !state.archivos[z]) { state.archivos[z] = f; colocados++; }
             else { state.multiSinAsignar.push({ file: f, motivo: z ? 'esa casilla ya tiene un archivo' : 'no se ha reconocido', sugerida: z || '' }); }
         }
@@ -4398,9 +4522,19 @@ button:disabled { opacity: .6; cursor: default; }
         if (con) {
             var cuerpoCo = '';
             if (con.hayClausula31) {
+                var hit = con.plazosHitos || [];
                 cuerpoCo = '<div class="val-nota"><strong>Cláusula 3.1 tal como se ha leído</strong>' +
                     (con.semanasTotal ? ' · plazo total de ejecución: ' + con.semanasTotal + ' semanas' : '') + '</div>' +
                     '<pre class="val-pre">' + con.clausula31.map(function (l) { return esc(l); }).join('\n') + '</pre>' +
+                    ((con.clausula3 && con.clausula3.length > con.clausula31.length)
+                        ? '<details class="val-texto"><summary>Ver la cláusula 3 completa (' + con.clausula3.length + ' líneas)</summary><pre class="val-pre">' +
+                          con.clausula3.map(function (l) { return esc(l); }).join('\n') + '</pre></details>' : '') +
+                    (hit.length
+                        ? '<div class="val-nota"><strong>Plazos detectados en la cláusula 3 (a revisar):</strong> ' +
+                          hit.map(function (h, i) { return 'Hito ' + (i + 1) + ': ' + h.dias + ' días' + (h.unidad === 'semanas' ? ' (' + h.n + ' semanas)' : ''); }).join(' · ') + '</div>' +
+                          '<div class="val-texto-acciones"><button class="btn-sec" id="btn-plazos-contrato">Rellenar las fases por orden con estos plazos</button>' +
+                          '<span class="nota-pie">Hito 1 → primera fase, y así sucesivamente. Revisa la correspondencia y escribe la fecha de firma antes de confirmar.</span></div>'
+                        : '') +
                     '<div class="val-nota">' + (con.mencionaMateriales
                         ? 'La cláusula menciona selección o definición de materiales. Si fija plazos por fase, introdúcelos en la tarjeta «Plazos de definición de materiales».'
                         : 'La cláusula no menciona plazos de selección de materiales: no se mostrarán barras de plazo, salvo que los introduzcas a mano.') + '</div>';
@@ -4632,7 +4766,7 @@ button:disabled { opacity: .6; cursor: default; }
         }).join('');
         return '<div class="gen-card centro"><h2>Extrayendo datos…</h2>' +
             '<div class="barra grande"><div class="barra-i" style="width:' + state.progreso + '%"></div></div>' +
-            '<p class="progreso">' + state.progreso + ' %</p><ul class="pasos">' + pasos + '</ul></div>';
+            '<p class="progreso">' + state.progreso + ' %</p>' + (state.ocrMsg ? '<p class="progreso">' + esc(state.ocrMsg) + '</p>' : '') + '<ul class="pasos">' + pasos + '</ul></div>';
     }
 
     /* -------------------------------------------------------------------- render */
@@ -4718,17 +4852,33 @@ button:disabled { opacity: .6; cursor: default; }
             };
         });
 
-        // carga múltiple
-        el = $('multi-file');
-        if (el) { el.onchange = function () { if (el.files && el.files.length) { colocarArchivos(Array.prototype.slice.call(el.files)); } }; }
-        el = $('multi-zona');
-        if (el) {
-            el.ondragover = function (e) { e.preventDefault(); el.classList.add('arrastrando'); };
-            el.ondragleave = function () { el.classList.remove('arrastrando'); };
-            el.ondrop = function (e) {
-                e.preventDefault(); el.classList.remove('arrastrando');
-                if (e.dataTransfer.files && e.dataTransfer.files.length) { colocarArchivos(Array.prototype.slice.call(e.dataTransfer.files)); }
+        // carga múltiple (variables propias: "el" se reasigna más abajo y rompía los manejadores)
+        var mf = $('multi-file');
+        if (mf) {
+            mf.onchange = function () {
+                var fl = mf.files ? Array.prototype.slice.call(mf.files) : [];
+                mf.value = '';
+                if (fl.length) { colocarArchivos(fl); }
             };
+        }
+        var mz = $('multi-zona');
+        if (mz) {
+            mz.ondragover = function (e) { e.preventDefault(); mz.classList.add('arrastrando'); };
+            mz.ondragleave = function () { mz.classList.remove('arrastrando'); };
+            mz.ondrop = function () { mz.classList.remove('arrastrando'); };
+        }
+        if (!window._dxDropMulti) {
+            window._dxDropMulti = true;
+            window.addEventListener('dragover', function (e) {
+                if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') >= 0) { e.preventDefault(); }
+            });
+            window.addEventListener('drop', function (e) {
+                if (!(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length)) { return; }
+                e.preventDefault();
+                if (state.vista !== 'generador') { return; }
+                if (e.target && e.target.closest && e.target.closest('.zona')) { return; }
+                colocarArchivos(Array.prototype.slice.call(e.dataTransfer.files));
+            });
         }
         Array.prototype.forEach.call(document.querySelectorAll('[data-asignar]'), function (sel) {
             sel.onchange = function () {
@@ -4777,6 +4927,16 @@ button:disabled { opacity: .6; cursor: default; }
         Array.prototype.forEach.call(document.querySelectorAll('.val-plazo, #val-plazo-firma'), function (n) {
             n.oninput = function () { leerPlazos(); };
         });
+        var bpc = $('btn-plazos-contrato');
+        if (bpc) {
+            bpc.onclick = function () {
+                var hs = (state.extraido.contrato || {}).plazosHitos || [];
+                var ins = document.querySelectorAll('.val-plazo');
+                if (!ins.length) { alert('Para rellenar las fases hace falta cargar antes el Excel de definición de materiales.'); return; }
+                Array.prototype.forEach.call(ins, function (nn, ix) { if (hs[ix]) { nn.value = hs[ix].dias; } });
+                leerPlazos();
+            };
+        }
 
         // dashboard
         Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) {

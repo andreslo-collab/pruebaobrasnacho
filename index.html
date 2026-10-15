@@ -577,6 +577,22 @@ button:disabled { opacity: .6; cursor: default; }
 .multi-n { font-size: 13px; font-weight: 600; color: #1a1a1a; }
 .multi-fila small { color: #6b7075; font-size: 11.5px; }
 .multi-fila select { max-width: 340px; }
+
+/* ===== gráfico de plazos de definición ===== */
+.pg { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.pg-fila { display: grid; grid-template-columns: minmax(150px, 230px) 1fr minmax(130px, 190px); gap: 14px; align-items: center; }
+.pg-fase { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: #2f3338; }
+.pg-fase span { font-size: 11px; color: #6b7075; }
+.pg-pista { height: 16px; background: #eceef0; overflow: hidden; }
+.pg-barra { height: 100%; transition: width .6s ease; }
+.pg-barra.verde { background: linear-gradient(90deg, #86efac, #15803d); }
+.pg-barra.ambar { background: linear-gradient(90deg, #fcd34d, #b45309); }
+.pg-barra.rojo { background: linear-gradient(90deg, #f87171, #b91c1c); }
+.pg-txt { font-size: 13px; font-weight: 700; display: flex; flex-direction: column; gap: 1px; }
+.pg-txt small { font-size: 11px; font-weight: 400; color: #6b7075; }
+.pg-verde { color: #15803d; } .pg-ambar { color: #b45309; } .pg-rojo { color: #c62828; }
+@media (max-width: 700px) { .pg-fila { grid-template-columns: 1fr; gap: 4px; } }
+@media print { .pg-fila { break-inside: avoid; } }
 /*__CSS_FIN__*/
 </style>
 </head>
@@ -2413,6 +2429,55 @@ button:disabled { opacity: .6; cursor: default; }
             '<div class="roscos">' + cards + '</div></div>';
     }
 
+    function plazosGrafico(D) {
+        var p = D && D.plazos, m = D && D.materiales;
+        if (!p || !p.firma || !p.fases || !m || !m.fases || !m.fases.length) { return ''; }
+        var f0 = String(p.firma).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!f0) { return ''; }
+        var DIA = 86400000, items = m.items || [];
+        var ini = Date.UTC(+f0[1], +f0[2] - 1, +f0[3]);
+        var ahora = new Date();
+        var hoy = Date.UTC(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+        var p2 = function (n) { return (n < 10 ? '0' : '') + n; };
+        var fmtF = function (t) { var d = new Date(t); return p2(d.getUTCDate()) + '/' + p2(d.getUTCMonth() + 1) + '/' + d.getUTCFullYear(); };
+        var filas = [];
+        m.fases.forEach(function (f) {
+            var dias = parseInt(p.fases[f.fase], 10);
+            if (!dias || dias <= 0) { return; }
+            var defs = items.length ? items.filter(function (i) { return i.fase === f.fase; }) : (f.definiciones || []);
+            var eleg = defs.filter(function (x) { return x.estado === 'ELEGIDO'; }).length;
+            var noproc = defs.filter(function (x) { return x.estado === 'NO PROCEDE'; }).length;
+            var base = defs.length - noproc;
+            var pct = base > 0 ? (eleg / base) * 100 : null;
+            var lim = ini + dias * DIA;
+            filas.push({ fase: f.fase, dias: dias, restan: Math.round((lim - hoy) / DIA), lim: lim, pct: pct, hecha: pct !== null && pct >= 100 });
+        });
+        if (!filas.length) { return ''; }
+        var maxDias = Math.max.apply(null, filas.map(function (x) { return x.dias; }));
+        var rows = filas.map(function (x) {
+            var w, cls, txt, tono;
+            if (x.hecha) {
+                w = 100; cls = 'verde'; tono = 'verde'; txt = 'Completada';
+            } else if (x.restan > 0) {
+                w = Math.max(3, Math.min(100, (x.restan / maxDias) * 100));
+                var resto = x.restan / x.dias;
+                if (resto < 0.25) { cls = 'ambar'; tono = 'ambar'; } else { cls = 'verde'; tono = 'verde'; }
+                txt = 'Quedan ' + x.restan + (x.restan === 1 ? ' día' : ' días');
+            } else if (x.restan === 0) {
+                w = 100; cls = 'ambar'; tono = 'ambar'; txt = 'Vence hoy';
+            } else {
+                w = 100; cls = 'rojo'; tono = 'rojo'; txt = 'Vencido hace ' + (-x.restan) + (x.restan === -1 ? ' día' : ' días');
+            }
+            return '<div class="pg-fila">' +
+                '<div class="pg-fase"><strong>' + esc(x.fase) + '</strong><span>' + x.dias + ' días · límite ' + fmtF(x.lim) + '</span></div>' +
+                '<div class="pg-pista"><div class="pg-barra ' + cls + '" style="width:' + w.toFixed(1) + '%"></div></div>' +
+                '<div class="pg-txt pg-' + tono + '">' + txt + '<small>' + (x.pct === null ? 'sin datos' : fmtPct(x.pct, 0) + ' definido') + '</small></div>' +
+                '</div>';
+        }).join('');
+        return '<div class="bloque">' + filaCabecera('Tiempo restante para definir materiales', 'Plazos fijados en la cláusula 3.1 del contrato, contados desde la firma (' + fmtF(ini) + ').', filas.length + (filas.length === 1 ? ' fase' : ' fases')) +
+            '<div class="pg">' + rows + '</div></div>';
+    }
+
     function tabResumen(D) {
         var k = kpisCabecera(D);
         var html = '<div class="kpis">' +
@@ -2426,6 +2491,7 @@ button:disabled { opacity: .6; cursor: default; }
             '</div>';
 
         html += roscosFases(D);
+        html += plazosGrafico(D);
 
         var caps = capitulosUnificados(D);
         if (caps.length) {

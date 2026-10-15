@@ -514,25 +514,25 @@ button:disabled { opacity: .6; cursor: default; }
 /* pendientes unificados: una sola tarjeta blanca, cifras en rojo */
 .kpi.k-pend2 { grid-column: span 2; flex-direction: row; gap: 0; padding: 0; background: #fff; border-color: #e3e5e8; }
 .kpi-pp { flex: 1; display: flex; flex-direction: column; gap: 4px; padding: 14px; min-width: 0; }
-.kpi-pp + .kpi-pp { border-left: 1px solid #e3e5e8; }
+.kpi-pp + .kpi-pp { padding-left: 28px; }
 .kpi.k-pend2 .kpi-v { color: #c62828; }
 .se-card.se-c-pend2 { grid-column: span 2; background: #fff; }
 .se-card.se-c-pend2::before { display: none; }
 .se-pp2 { display: flex; gap: 0; }
 .se-pp { flex: 1; min-width: 0; padding-right: 18px; }
-.se-pp + .se-pp { padding-right: 0; padding-left: 18px; border-left: 1px solid var(--se-bd); }
+.se-pp + .se-pp { padding-right: 0; padding-left: 28px; }
 .se-c-pend2 .se-card-v { color: #c62828; }
 .se-panel.se-sc-pend2 { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0; background: #fff; }
 .se-sc-pend2 > div { flex: 1 1 240px; min-width: 0; }
-.se-sc-pend2 > div + div { border-left: 1px solid #e3e5e8; padding-left: 20px; }
+.se-sc-pend2 > div + div { padding-left: 28px; }
 .se-sc-pend2 b { color: #c62828; }
 @media (max-width: 700px) {
   .kpi.k-pend2, .se-card.se-c-pend2 { grid-column: auto; }
   .kpi.k-pend2, .se-pp2 { flex-direction: column; }
-  .kpi-pp + .kpi-pp { border-left: 0; border-top: 1px solid #e3e5e8; }
+  .kpi-pp + .kpi-pp { padding-left: 14px; padding-top: 0; }
   .se-pp { padding-right: 0; }
-  .se-pp + .se-pp { padding-left: 0; border-left: 0; border-top: 1px solid var(--se-bd); margin-top: 14px; padding-top: 14px; }
-  .se-sc-pend2 > div + div { border-left: 0; padding-left: 0; border-top: 1px solid #e3e5e8; margin-top: 12px; padding-top: 12px; }
+  .se-pp + .se-pp { padding-left: 0; margin-top: 14px; }
+  .se-sc-pend2 > div + div { padding-left: 0; margin-top: 12px; }
 }
 /*__CSS_FIN__*/
 </style>
@@ -2340,7 +2340,11 @@ button:disabled { opacity: .6; cursor: default; }
 
         var caps = capitulosUnificados(D);
         if (caps.length) {
-            html += '<div class="bloque">' + filaCabecera('Avance por capítulos', 'Presupuesto adjudicado frente a lo certificado.', caps.length + ' capítulos') +
+            html += '<div class="bloque">' + filaCabecera('Avance de certificación vs presupuesto', 'Comparativa capítulo a capítulo: presupuesto adjudicado frente a lo certificado.', caps.length + ' capítulos') +
+                '<div class="datos-ident"><span>Presupuesto: <strong>' + fmtMoney(k.pem) + '</strong></span>' +
+                '<span>Certificado: <strong>' + fmtMoney(k.cert) + '</strong></span>' +
+                '<span>Avance: <strong>' + fmtPct(k.pctCert) + '</strong></span>' +
+                '<span>Pendiente: <strong>' + (k.pem !== null && k.cert !== null ? fmtMoney(k.pem - k.cert) : '—') + '</strong></span></div>' +
                 tabla(['Código', 'Capítulo', 'Presupuesto', 'Certificado', 'Avance'],
                     caps.map(function (c) {
                         return ['<span class="mono">' + esc(c.codigo) + '</span>', esc(c.descripcion), fmtMoney(c.presupuesto), fmtMoney(c.certificado),
@@ -2952,7 +2956,6 @@ button:disabled { opacity: .6; cursor: default; }
         { id: 'seguimiento_economico', etiqueta: 'Seguimiento económico' },
         { id: 'facturacion', etiqueta: 'Facturación' },
         { id: 'def_materiales', etiqueta: 'Definición de materiales' },
-        { id: 'avance', etiqueta: 'Avance vs presupuesto' },
         { id: 'certificaciones', etiqueta: 'Certificaciones quincenales' }
     ];
 

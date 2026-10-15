@@ -4618,6 +4618,39 @@ button:disabled { opacity: .6; cursor: default; }
         return f ? String(f) : '';
     }
 
+    /** Importe de la factura CON IVA para el correo. Devuelve { valor, seguro }. */
+    function importeFacturaConIva(D) {
+        var f = (D.factura && D.factura.totales) || {};
+        var c = (D.certificacion && D.certificacion.totales) || {};
+        var pct = hayValor(f.ivaPct) ? f.ivaPct : (hayValor(c.ivaPct) ? c.ivaPct : null);
+        var r2 = function (x) { return Math.round(x * 100) / 100; };
+        var casi = function (a, b) { return hayValor(a) && hayValor(b) && Math.abs(a - b) < 0.02; };
+        // 1) Base conocida: base + IVA
+        if (hayValor(f.base)) {
+            var iva = hayValor(f.iva) ? f.iva : (pct !== null ? r2(f.base * pct / 100) : null);
+            if (iva !== null) { return { valor: r2(f.base + iva), seguro: true }; }
+        }
+        if (!hayValor(f.total)) {
+            return hayValor(c.total) ? { valor: c.total, seguro: false } : { valor: null, seguro: false };
+        }
+        // 2) Solo "total": comprobar si ya incluye IVA o es la base
+        if (hayValor(f.iva) && f.iva > 0) {
+            if (pct !== null) {
+                if (Math.abs(f.iva / f.total - pct / 100) < 0.003) { return { valor: r2(f.total + f.iva), seguro: true }; }
+                if (Math.abs(f.iva / (f.total - f.iva) - pct / 100) < 0.003) { return { valor: f.total, seguro: true }; }
+            }
+            if (f.total > f.iva * 3) { return { valor: r2(f.total + f.iva), seguro: false }; }
+        }
+        // 3) Contraste con la certificación
+        if (casi(f.total, c.total)) { return { valor: f.total, seguro: true }; }
+        if (casi(f.total, c.actual) || casi(f.total, c.origen)) {
+            if (pct !== null) { return { valor: r2(f.total * (1 + pct / 100)), seguro: true }; }
+        }
+        // 4) Sin pistas: se asume base si hay % de IVA, y se avisa
+        if (pct !== null) { return { valor: r2(f.total * (1 + pct / 100)), seguro: false }; }
+        return { valor: f.total, seguro: false };
+    }
+
     /** Asunto y cuerpo del correo con el texto habitual de envío de certificación y el enlace. */
     function textoCorreo(url) {
         var D = datos() || {};
@@ -4629,6 +4662,7 @@ button:disabled { opacity: .6; cursor: default; }
         var mn = String(cert.certificacion || '').match(/\d+/);
         var n = mn ? mn[0] : '';
         var fecha = fechaEjecucion(D, per);
+        var impIva = importeFacturaConIva(D);
         var cuerpo = saludoCliente(D) + '\n\n' +
             'A continuación, le adjunto la documentación correspondiente a la certificación' + (n ? ' nº' + n : '') +
             (fecha ? ' sobre una ejecución de obra a fecha ' + fecha : '') + '.\n\n' +
@@ -4637,7 +4671,7 @@ button:disabled { opacity: .6; cursor: default; }
             'Acompañando a dicha factura se adjunta la certificación técnica detallada y desglosada a origen, emitida por nuestro departamento de producción / arquitectura, junto con Presupuesto general de obra actualizado, y ficha de seguimiento económico.\n\n' +
             'Puede consultar el seguimiento completo de la obra en este enlace:\n' + url + '\n\n' +
             'Pueden realizar el ingreso, en la cuenta corriente que figura en la propia factura y a continuación se detalla.\n\n' +
-            (hayValor(k.facturaTotal) ? fmtMoney(k.facturaTotal) + '\n' : '') +
+            (hayValor(impIva.valor) ? fmtMoney(impIva.valor) + ' (IVA incluido)' + (impIva.seguro ? '' : ' [REVISAR: no se ha podido comprobar el IVA]') + '\n' : '') +
             CUENTA_INGRESO + '\n\n' +
             'Ante cualquier consulta/aclaración no dude en ponerse en contacto con nosotros, estamos a su entera disposición.\n\n' +
             'Atentamente,';

@@ -555,6 +555,17 @@ button:disabled { opacity: .6; cursor: default; }
 .fc-chip.ok { background: #dcfce7; color: #166534; border-color: #86efac; }
 .fc-chip.pend { background: #fef3c7; color: #92400e; border-color: #fde68a; }
 .fc-nota { display: block; margin-top: 3px; font-size: 10.5px; color: #6b7075; }
+
+/* ===== plazos de definición de materiales ===== */
+.plazo-bloque { display: block; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eceef0; text-align: left; width: 100%; }
+.plazo-t { display: block; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: #6e737a; margin-bottom: 5px; }
+.plazo-txt { display: block; font-size: 12px; font-weight: 600; margin-top: 5px; color: #2f3338; }
+.plazo-txt.plazo-ambar { color: #b45309; }
+.plazo-txt.plazo-rojo { color: #c62828; }
+.plazo-txt.plazo-verde { color: #15803d; }
+.plazo-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px 18px; }
+.plazo-fila { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; }
+.plazo-fila .val-input { max-width: 150px; }
 /*__CSS_FIN__*/
 </style>
 </head>
@@ -2325,6 +2336,38 @@ button:disabled { opacity: .6; cursor: default; }
         };
     }
 
+    function plazoFaseHtml(D, fase, pct) {
+        var p = D && D.plazos;
+        if (!p || !p.firma || !p.fases) { return ''; }
+        var dias = parseInt(p.fases[fase], 10);
+        if (!dias || dias <= 0) { return ''; }
+        var m = String(p.firma).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!m) { return ''; }
+        var DIA = 86400000;
+        var ini = Date.UTC(+m[1], +m[2] - 1, +m[3]);
+        var ahora = new Date();
+        var hoy = Date.UTC(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+        var lim = ini + dias * DIA;
+        var restan = Math.round((lim - hoy) / DIA);
+        var usado = Math.max(0, Math.min(100, ((hoy - ini) / (dias * DIA)) * 100));
+        var dl = new Date(lim);
+        var p2 = function (n) { return (n < 10 ? '0' : '') + n; };
+        var fechaLim = p2(dl.getUTCDate()) + '/' + p2(dl.getUTCMonth() + 1) + '/' + dl.getUTCFullYear();
+        var txt, cls, tono;
+        if (pct !== null && pct !== undefined && pct >= 100) {
+            txt = 'Fase completada · límite ' + fechaLim; cls = 'b-green'; tono = 'verde'; usado = 100;
+        } else if (restan > 0) {
+            txt = 'Quedan ' + restan + (restan === 1 ? ' día' : ' días') + ' · límite ' + fechaLim;
+            if (usado >= 75) { cls = 'b-amber'; tono = 'ambar'; } else { cls = 'b-green'; tono = 'verde'; }
+        } else if (restan === 0) {
+            txt = 'Vence hoy · límite ' + fechaLim; cls = 'b-amber'; tono = 'ambar'; usado = 100;
+        } else {
+            txt = 'Plazo vencido hace ' + (-restan) + (restan === -1 ? ' día' : ' días') + ' · límite ' + fechaLim; cls = 'b-rose'; tono = 'rojo'; usado = 100;
+        }
+        return '<span class="plazo-bloque"><span class="plazo-t">Plazo de definición · ' + dias + ' días</span>' +
+            barra(usado, cls) + '<span class="plazo-txt plazo-' + tono + '">' + txt + '</span></span>';
+    }
+
     function roscosFases(D) {
         var m = D.materiales;
         if (!m || !m.fases || !m.fases.length) { return ''; }
@@ -2352,6 +2395,7 @@ button:disabled { opacity: .6; cursor: default; }
                 '<span class="rosco-tit">' + esc(tit) + '</span>' +
                 '<span class="rosco-det">' + eleg + ' de ' + base + ' elegidas</span>' +
                 '<span class="rosco-sub">' + pend + ' pendientes · ' + proc + ' en proceso</span>' +
+                plazoFaseHtml(D, f.fase, pct) +
                 '</div>';
         }).join('');
         return '<div class="bloque">' + filaCabecera('Definición de materiales', 'Porcentaje de definiciones elegidas en cada fase.', m.fases.length + ' fases') +
@@ -2754,6 +2798,7 @@ button:disabled { opacity: .6; cursor: default; }
                 '<span class="fase-num">' + defs.length + ' definiciones</span>' +
                 barra(pctFase, 'b-green') +
                 '<span class="fase-detalle">' + eleg + ' elegidas · ' + pend + ' pendientes · ' + noproc + ' no procede</span>' +
+                plazoFaseHtml(D, f.fase, pctFase) +
                 '</button>';
         });
         html += '</div>';
@@ -3189,7 +3234,8 @@ button:disabled { opacity: .6; cursor: default; }
             seguimiento: d.seguimiento || null,
             factura: d.factura || null,
             materiales: d.materiales || null,
-            obra: d.obra || null
+            obra: d.obra || null,
+            plazos: d.plazos || null
         }));
         // 1) fuera todos los campos internos (_lineas, _hojas, _resumen, ...)
         limpiaInternos(copia);
@@ -4238,6 +4284,24 @@ button:disabled { opacity: .6; cursor: default; }
             } catch (err) { partes.push(bloqueFallo('Materiales y definición (Excel 5)', mat, err)); }
         }
 
+        // ---------- plazos de definición de materiales (cláusula 3.1 del contrato)
+        var matP = e.excel5;
+        if (matP && matP._esLibroDefinicion && (matP.fases || []).length) {
+            var pf = state.plazosForm || { firma: '', dias: {} };
+            var filasP = matP.fases.map(function (f) {
+                var tit = (f.titulo || '').replace(/^FASE\s*\d+\s*-?\s*/i, '').slice(0, 50);
+                return '<label class="plazo-fila"><span>' + esc(f.fase) + (tit ? ' · ' + esc(tit) : '') + '</span>' +
+                    '<input type="number" min="1" step="1" class="val-input mini val-plazo" data-fase="' + esc(f.fase) + '" value="' +
+                    esc((pf.dias && pf.dias[f.fase]) || '') + '" placeholder="días"></label>';
+            }).join('');
+            partes.push('<section class="val-card"><header class="val-head"><div><h3>Plazos de definición de materiales (contrato)</h3>' +
+                '<p>Cláusula 3.1, «Plazos de ejecución de obra». Si el contrato no fija plazos de selección por fase, deja todo vacío y el dashboard no mostrará barras de plazo.</p></div>' +
+                '<span class="val-badge">opcional</span></header>' +
+                '<div class="plazo-form"><label class="plazo-fila"><span>Fecha de firma del contrato</span>' +
+                '<input type="date" id="val-plazo-firma" class="val-input" value="' + esc(pf.firma || '') + '"></label>' + filasP + '</div>' +
+                '<div class="val-nota">Días naturales contados desde la firma (1 semana = 7 días). Sin fecha de firma no se muestran las barras.</div></section>');
+        }
+
         // ---------- zonas con resultado inesperado (documento no reconocido o error)
         ZONAS.forEach(function (z) {
             var r = state.extraido[z.id];
@@ -4562,6 +4626,9 @@ button:disabled { opacity: .6; cursor: default; }
         if (el) { el.onclick = function () { state.vista = 'generador'; render(); }; }
         el = $('btn-confirmar');
         if (el) { el.onclick = confirmar; }
+        Array.prototype.forEach.call(document.querySelectorAll('.val-plazo, #val-plazo-firma'), function (n) {
+            n.oninput = function () { leerPlazos(); };
+        });
 
         // dashboard
         Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) {
@@ -4812,6 +4879,24 @@ button:disabled { opacity: .6; cursor: default; }
 
     /* ---------------------------------------------------------------- confirmar */
 
+    function leerPlazos() {
+        var form = state.plazosForm || { firma: '', dias: {} };
+        if (!form.dias) { form.dias = {}; }
+        var fi = $('val-plazo-firma');
+        if (fi) { form.firma = fi.value || ''; }
+        Array.prototype.forEach.call(document.querySelectorAll('.val-plazo'), function (n) {
+            form.dias[n.getAttribute('data-fase')] = n.value;
+        });
+        state.plazosForm = form;
+        var fases = {}, hay = false;
+        Object.keys(form.dias).forEach(function (k) {
+            var d = parseInt(form.dias[k], 10);
+            if (d > 0) { fases[k] = d; hay = true; }
+        });
+        if (!hay || !/^\d{4}-\d{2}-\d{2}$/.test(form.firma || '')) { return null; }
+        return { firma: form.firma, fases: fases };
+    }
+
     function confirmar() {
         // El nombre sale de lo que se ve en pantalla; si no hay nada, de lo detectado.
         var vis = ($('val-identificador') || {}).value;
@@ -4837,6 +4922,7 @@ button:disabled { opacity: .6; cursor: default; }
             factura: fac,
             materiales: (mat && mat.items && mat.items.length) ? mat : null,
             obra: (mat && mat._resumen) ? mat._resumen : null,
+            plazos: leerPlazos(),
             pem: pem, cert: cert, pct: pct
         };
 

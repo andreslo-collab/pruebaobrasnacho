@@ -566,6 +566,17 @@ button:disabled { opacity: .6; cursor: default; }
 .plazo-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px 18px; }
 .plazo-fila { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; }
 .plazo-fila .val-input { max-width: 150px; }
+.multi-drop { border: 2px dashed #8b9096; border-radius: 6px; padding: 18px 20px; background: #fafafa; margin: 0 0 16px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; transition: .15s; }
+.multi-drop.arrastrando { border-color: #1a1a1a; background: #eeeeee; }
+.multi-t { font-size: 15px; font-weight: 700; color: #1a1a1a; }
+.multi-drop p { margin: 0; font-size: 12.5px; color: #5c6168; max-width: 760px; }
+.multi-msg { font-size: 12.5px; font-weight: 600; color: #1f6f3a; }
+.multi-sin { width: 100%; border-top: 1px solid #dcdee0; padding-top: 10px; margin-top: 4px; }
+.multi-sin-t { font-size: 12px; font-weight: 700; color: #8a5a00; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+.multi-fila { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 4px 0; }
+.multi-n { font-size: 13px; font-weight: 600; color: #1a1a1a; }
+.multi-fila small { color: #6b7075; font-size: 11.5px; }
+.multi-fila select { max-width: 340px; }
 /*__CSS_FIN__*/
 </style>
 </head>
@@ -3464,7 +3475,8 @@ button:disabled { opacity: .6; cursor: default; }
         { id: 'pdf2', etiqueta: 'PDF 2 · Presupuesto base / modificado', acepta: '.pdf', tipo: 'pdf', parser: 'presupuesto' },
         { id: 'pdf3', etiqueta: 'PDF 3 · Ficha de seguimiento económico', acepta: '.pdf,.xlsx,.xls,.csv', tipo: 'auto', parser: 'seguimiento' },
         { id: 'pdf4', etiqueta: 'PDF 4 · Factura', acepta: '.pdf', tipo: 'pdf', parser: 'factura' },
-        { id: 'excel5', etiqueta: 'Excel 5 · Selección e insumo de materiales', acepta: '.xlsx,.xls,.csv', tipo: 'hoja', parser: 'materiales' }
+        { id: 'excel5', etiqueta: 'Excel 5 · Selección e insumo de materiales', acepta: '.xlsx,.xls,.csv', tipo: 'hoja', parser: 'materiales' },
+        { id: 'contrato', etiqueta: 'Contrato de ejecución de obra (opcional)', acepta: '.pdf', tipo: 'pdf', parser: 'contrato' }
     ];
 
     /* ------------------------------------------------------------------ estado */
@@ -3997,6 +4009,84 @@ button:disabled { opacity: .6; cursor: default; }
         throw new Error('Formato no soportado en esta casilla: ' + file.name);
     }
 
+    /* ---- Contrato: cláusula 3.1 «Plazos de ejecución de obra» ---- */
+    function parsearContrato(lineas, opts) {
+        var ls = (lineas || []).map(function (t) { return String(t).trim(); }).filter(Boolean);
+        var r = { tipo: 'contrato', avisos: [], clausula31: [], hayClausula31: false, semanasTotal: null, mencionaMateriales: false };
+        var texto = ls.join(' ');
+        if (ls.length < 25 || texto.length < 1500) {
+            r.avisos.push('El PDF del contrato no tiene texto legible (probablemente está escaneado). Los plazos de definición de materiales hay que introducirlos a mano, si el contrato los fija.');
+            return r;
+        }
+        var mejor = [];
+        for (var i = 0; i < ls.length; i++) {
+            if (!/^3\.1(?![\d])/.test(ls[i])) { continue; }
+            var tr = [ls[i]];
+            for (var j = i + 1; j < ls.length && tr.length < 30; j++) {
+                if (/^3\.[2-9](?![\d])/.test(ls[j]) || /^4\s*[.\-)]\s*\S/.test(ls[j])) { break; }
+                tr.push(ls[j]);
+            }
+            if (tr.join(' ').length > mejor.join(' ').length) { mejor = tr; }
+        }
+        if (mejor.join(' ').length < 60) {
+            r.avisos.push('No se ha encontrado la cláusula 3.1 en el contrato. Si no hay cláusula 3.1, el contrato no fija plazos y no se mostrarán barras de plazo.');
+            return r;
+        }
+        r.hayClausula31 = true;
+        r.clausula31 = mejor;
+        var tx = mejor.join(' ');
+        var m = tx.match(/(\d{1,3})\s*semanas/i);
+        if (m) { r.semanasTotal = parseInt(m[1], 10); }
+        r.mencionaMateriales = /(selecci|definici|elecci)/i.test(tx);
+        return r;
+    }
+
+    /* ---- Carga múltiple: reparto automático de archivos en sus casillas ---- */
+    function zonaPorNombre(nombre) {
+        var n = String(nombre || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        var esHoja = /\.(xlsx|xls|csv)$/.test(n);
+        if (/contrato/.test(n)) { return esHoja ? null : 'contrato'; }
+        if (/seguimiento|ficha/.test(n)) { return 'pdf3'; }
+        if (esHoja) { return 'excel5'; }
+        if (/factura|(^|[^a-z])fra([^a-z]|$)/.test(n)) { return 'pdf4'; }
+        if (/certificacion|certif/.test(n)) { return 'pdf1'; }
+        if (/presupuesto|presu/.test(n)) { return 'pdf2'; }
+        return null;
+    }
+
+    async function zonaPorTexto(file) {
+        var lib = await asegurarPdfJs();
+        if (!lib) { return null; }
+        var pdf = await lib.getDocument({ data: await file.arrayBuffer() }).promise;
+        var t = '';
+        for (var p = 1; p <= Math.min(2, pdf.numPages); p++) {
+            var cont = await (await pdf.getPage(p)).getTextContent();
+            t += ' ' + cont.items.map(function (it) { return it.str; }).join(' ');
+        }
+        t = t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (/contrato de ejecucion de obra|contrato de obra/.test(t)) { return 'contrato'; }
+        if (/seguimiento economico|relacion de facturas emitidas|detalle obra ejecutada/.test(t)) { return 'pdf3'; }
+        if (/total factura|factura n/.test(t)) { return 'pdf4'; }
+        if (/certificacion/.test(t)) { return 'pdf1'; }
+        if (/presupuesto/.test(t)) { return 'pdf2'; }
+        return null;
+    }
+
+    async function colocarArchivos(lista) {
+        state.multiSinAsignar = state.multiSinAsignar || [];
+        var colocados = 0;
+        for (var i = 0; i < lista.length; i++) {
+            var f = lista[i];
+            var z = zonaPorNombre(f.name);
+            if (!z && /\.pdf$/i.test(f.name)) { try { z = await zonaPorTexto(f); } catch (e) { z = null; } }
+            if (z && !state.archivos[z]) { state.archivos[z] = f; colocados++; }
+            else { state.multiSinAsignar.push({ file: f, motivo: z ? 'esa casilla ya tiene un archivo' : 'no se ha reconocido', sugerida: z || '' }); }
+        }
+        state.multiMsg = colocados + ' de ' + lista.length + ' archivo(s) colocado(s) automáticamente.';
+        state.vista = 'generador';
+        render();
+    }
+
     function parsearCon(parser, lineas, opts) {
         opts = opts || {};
         var r;
@@ -4004,6 +4094,7 @@ button:disabled { opacity: .6; cursor: default; }
         else if (parser === 'certificacion') { r = DX.parseCertification(lineas, opts); }
         else if (parser === 'seguimiento') { r = DX.parseTracking(lineas, opts); }
         else if (parser === 'factura') { r = DX.parseInvoice(lineas, opts); }
+        else if (parser === 'contrato') { r = parsearContrato(lineas, opts); }
         else { r = { tipo: parser, avisos: ['Tipo de documento no reconocido'] }; }
         r.origen = opts.origen || '';
         if (opts.numPaginas) { r.numPaginas = opts.numPaginas; }
@@ -4302,6 +4393,23 @@ button:disabled { opacity: .6; cursor: default; }
                 '<div class="val-nota">Días naturales contados desde la firma (1 semana = 7 días). Sin fecha de firma no se muestran las barras.</div></section>');
         }
 
+        // ---------- contrato (cláusula 3.1)
+        var con = e.contrato;
+        if (con) {
+            var cuerpoCo = '';
+            if (con.hayClausula31) {
+                cuerpoCo = '<div class="val-nota"><strong>Cláusula 3.1 tal como se ha leído</strong>' +
+                    (con.semanasTotal ? ' · plazo total de ejecución: ' + con.semanasTotal + ' semanas' : '') + '</div>' +
+                    '<pre class="val-pre">' + con.clausula31.map(function (l) { return esc(l); }).join('\n') + '</pre>' +
+                    '<div class="val-nota">' + (con.mencionaMateriales
+                        ? 'La cláusula menciona selección o definición de materiales. Si fija plazos por fase, introdúcelos en la tarjeta «Plazos de definición de materiales».'
+                        : 'La cláusula no menciona plazos de selección de materiales: no se mostrarán barras de plazo, salvo que los introduzcas a mano.') + '</div>';
+            } else {
+                cuerpoCo = '<div class="val-nota">No hay plazos de definición de materiales leídos del contrato. Si el contrato los fija, introdúcelos a mano en la tarjeta «Plazos de definición de materiales».</div>';
+            }
+            partes.push(tarjetaCabecera('Contrato de ejecución de obra', 'Cláusula 3.1, «Plazos de ejecución de obra».', cuerpoCo, con, 'contrato'));
+        }
+
         // ---------- zonas con resultado inesperado (documento no reconocido o error)
         ZONAS.forEach(function (z) {
             var r = state.extraido[z.id];
@@ -4472,6 +4580,22 @@ button:disabled { opacity: .6; cursor: default; }
                 '</div>';
         }).join('');
 
+        var sinAs = (state.multiSinAsignar || []).map(function (it, k) {
+            var ops = '<option value="">Elegir casilla…</option>' + ZONAS.map(function (z) {
+                return '<option value="' + z.id + '"' + (z.id === it.sugerida ? ' selected' : '') + '>' + esc(z.etiqueta) + '</option>';
+            }).join('');
+            return '<div class="multi-fila"><span class="multi-n">' + esc(it.file.name) + '</span><small>' + esc(it.motivo) + '</small>' +
+                '<select class="val-input" data-asignar="' + k + '">' + ops + '</select></div>';
+        }).join('');
+        var multi = '<div class="multi-drop" id="multi-zona">' +
+            '<input type="file" id="multi-file" multiple accept=".pdf,.xlsx,.xls,.csv" hidden>' +
+            '<div class="multi-t">Carga todos los documentos a la vez</div>' +
+            '<p>Arrastra aquí la certificación, el presupuesto, la ficha de seguimiento, la factura, el contrato y el Excel de materiales. Cada archivo se coloca solo en su casilla.</p>' +
+            '<label class="zona-btn" for="multi-file">Elegir varios archivos</label>' +
+            (state.multiMsg ? '<div class="multi-msg">' + esc(state.multiMsg) + '</div>' : '') +
+            (sinAs ? '<div class="multi-sin"><div class="multi-sin-t">Archivos sin casilla asignada</div>' + sinAs + '</div>' : '') +
+            '</div>';
+
         var hist = '';
         if (state.historial.length) {
             hist = '<div class="bloque"><div class="bloque-head"><div><h3>Dashboards generados</h3><p>Se guardan en este navegador (localStorage), sin base de datos externa.</p></div>' +
@@ -4493,7 +4617,8 @@ button:disabled { opacity: .6; cursor: default; }
             '<label class="val-field"><span>Periodo (quincena)</span>' +
             '<input type="text" id="gen-periodo" class="val-input" value="' + esc(state.periodo) + '" placeholder="Ej. 2ª quincena de septiembre de 2026"></label>' +
             '<div class="gen-cab">' +
-            '<span>Documentos de la quincena</span><span class="chip">' + cargados + ' de 5 cargados</span></div>' +
+            '<span>Documentos de la quincena</span><span class="chip">' + cargados + ' cargados</span></div>' +
+            multi +
             '<div class="zonas">' + zonas + '</div>' +
             '<div class="gen-acciones"><button id="btn-generar" class="btn-primario grande">Procesar y validar datos →</button>' +
             '<p class="nota-pie">Los PDF se leen en tu navegador. Nada se sube a ningún servidor.</p></div>' +
@@ -4590,6 +4715,29 @@ button:disabled { opacity: .6; cursor: default; }
                 if (e.dataTransfer.files && e.dataTransfer.files[0]) {
                     state.archivos[id] = e.dataTransfer.files[0]; render();
                 }
+            };
+        });
+
+        // carga múltiple
+        el = $('multi-file');
+        if (el) { el.onchange = function () { if (el.files && el.files.length) { colocarArchivos(Array.prototype.slice.call(el.files)); } }; }
+        el = $('multi-zona');
+        if (el) {
+            el.ondragover = function (e) { e.preventDefault(); el.classList.add('arrastrando'); };
+            el.ondragleave = function () { el.classList.remove('arrastrando'); };
+            el.ondrop = function (e) {
+                e.preventDefault(); el.classList.remove('arrastrando');
+                if (e.dataTransfer.files && e.dataTransfer.files.length) { colocarArchivos(Array.prototype.slice.call(e.dataTransfer.files)); }
+            };
+        }
+        Array.prototype.forEach.call(document.querySelectorAll('[data-asignar]'), function (sel) {
+            sel.onchange = function () {
+                var idx = parseInt(sel.getAttribute('data-asignar'), 10);
+                var it = (state.multiSinAsignar || [])[idx];
+                if (!it || !sel.value) { return; }
+                state.archivos[sel.value] = it.file;
+                state.multiSinAsignar.splice(idx, 1);
+                render();
             };
         });
 

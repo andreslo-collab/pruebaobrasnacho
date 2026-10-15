@@ -550,6 +550,11 @@ button:disabled { opacity: .6; cursor: default; }
 .fac-tabla td.tot { color: #fff; font-size: 24px; font-weight: 800; letter-spacing: -.01em; }
 @media (max-width: 960px) { .fac-tabla { min-width: 900px; } }
 @media print { .fac-tabla th.tot, .fac-tabla td.tot { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+.fc-tot { font-weight: 800; color: #111; white-space: nowrap; }
+.fc-chip { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 3px 9px; border: 1px solid; white-space: nowrap; }
+.fc-chip.ok { background: #dcfce7; color: #166534; border-color: #86efac; }
+.fc-chip.pend { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+.fc-nota { display: block; margin-top: 3px; font-size: 10.5px; color: #6b7075; }
 /*__CSS_FIN__*/
 </style>
 </head>
@@ -2904,7 +2909,36 @@ button:disabled { opacity: .6; cursor: default; }
 
     function tabCertificaciones(D) {
         var c = D.certificacion, h = (D.historial || []);
+        var sg = D.seguimiento || {};
+        var mf = function (n) {
+            if (n === null || n === undefined || isNaN(n)) { return '—'; }
+            var p = Math.abs(n).toFixed(2).split('.');
+            return (n < 0 ? '-' : '') + p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + p[1] + ' €';
+        };
+        var fa = (sg.facturas && sg.facturas.length) ? sg.facturas : [];
         var html = '';
+        if (fa.length) {
+            var sB = 0, sI = 0, sT = 0, sC = 0;
+            fa.forEach(function (f) { sB += f.base || 0; sI += f.iva || 0; sT += f.total || 0; sC += f.cobrado || 0; });
+            var kps = sg.kpis || {};
+            var saldoF = (kps.totalSaldoFavorEnue && kps.totalSaldoFavorEnue.valor !== undefined && kps.totalSaldoFavorEnue.valor !== null && !isNaN(kps.totalSaldoFavorEnue.valor)) ? kps.totalSaldoFavorEnue.valor : (sT - sC);
+            html += '<div class="bloque">' + filaCabecera('Facturas emitidas al cliente', 'Todas las facturas emitidas en la obra, con el importe total con IVA.', fa.length + (fa.length === 1 ? ' factura' : ' facturas')) +
+                '<div class="kpis">' + kpi('Facturas emitidas', String(fa.length)) + kpi('Total facturado', mf(sT), 'IVA incluido') +
+                kpi('Total cobrado', mf(sC)) + kpi('Saldo pendiente de pago', mf(saldoF), 'según ficha de seguimiento', 'k-green') + '</div>' +
+                tabla(['Factura', 'Fecha', 'Concepto', 'Origen', 'Base', 'IVA', 'Total con IVA', 'Cobro', 'Cobrado'],
+                    fa.map(function (f) {
+                        var pagada = f.cobrado !== null && f.cobrado !== undefined && f.cobrado > 0;
+                        var origen = (f.origen !== null && f.origen !== undefined) ? mf(f.origen) : esc(f.origenTxt || '—');
+                        var cobro = pagada
+                            ? '<span class="fc-chip ok">Cobrada</span><small class="fc-nota">' + esc([f.forma, f.fechaPago].filter(Boolean).join(' · ')) + '</small>'
+                            : '<span class="fc-chip pend">Pendiente de cobro</span>';
+                        return ['<span class="mono">' + esc(f.factura) + '</span>', esc(f.fecha), esc(f.concepto), origen,
+                            mf(f.base), mf(f.iva), '<span class="fc-tot">' + mf(f.total) + '</span>', cobro,
+                            pagada ? mf(f.cobrado) : '—'];
+                    }).concat([['<strong>Total</strong>', '', '', '', '<strong>' + mf(sB) + '</strong>', '<strong>' + mf(sI) + '</strong>',
+                        '<span class="fc-tot">' + mf(sT) + '</span>', '', '<strong>' + mf(sC) + '</strong>']]),
+                    ['', '', '', 'num', 'num', 'num', 'num', '', 'num']) + '</div>';
+        }
         if (c) {
             html += '<div class="bloque">' + filaCabecera('Certificación de este periodo', 'Importes de la certificación cargada.') +
                 '<div class="kpis">' + kpi('Origen', fmtMoney(c.totales.origen)) + kpi('Quincena', fmtMoney(c.totales.actual)) +
@@ -3714,6 +3748,104 @@ button:disabled { opacity: .6; cursor: default; }
         }
     }
 
+    /* ---- Relación de facturas emitidas (tabla de la ficha), leída por coordenadas ---- */
+    function leerFacturasFicha(crudos) {
+        var RE_NUM = /^-?\d{1,3}(?:\.\d{3})*,\d{2}\s*€?$/;
+        var RE_PCT = /^\d+(?:,\d+)?\s*%$/;
+        var toNum = function (t) { return parseFloat(String(t).replace(/[€\s]/g, '').replace(/\./g, '').replace(',', '.')); };
+        var normT = function (t) { return String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(); };
+        var esNum = function (c) { return RE_NUM.test(String(c.s).trim()); };
+        var esPct = function (c) { return RE_PCT.test(String(c.s).trim()); };
+        var cx = function (c) { return c.x + (c.w || 0) / 2; };
+        var unir = function (lista) {
+            lista = lista.slice().sort(function (a, b) { return a.x - b.x; });
+            var t = '', fin = null;
+            lista.forEach(function (c) { if (fin !== null && c.x - fin > 1.5) { t += ' '; } t += c.s; fin = c.x + (c.w || 0); });
+            return t.replace(/\s+/g, ' ').trim();
+        };
+        var paginas = {};
+        (crudos || []).forEach(function (c) { if (c.s && String(c.s).trim()) { (paginas[c.p] = paginas[c.p] || []).push(c); } });
+        var salida = [];
+        Object.keys(paginas).forEach(function (pk) {
+            if (salida.length) { return; }
+            var its = paginas[pk];
+            var hFac = null, hCon = null;
+            its.filter(function (c) { return normT(c.s) === 'factura'; }).forEach(function (f) {
+                if (hFac) { return; }
+                var cc = its.filter(function (c) { return normT(c.s) === 'concepto' && Math.abs(c.y - f.y) < 4; })[0];
+                if (cc) { hFac = f; hCon = cc; }
+            });
+            if (!hFac) { return; }
+            var hy = hFac.y;
+            var cab = function (nombre, cond) {
+                return its.filter(function (c) { return Math.abs(c.y - hy) < 4 && normT(c.s) === nombre && (!cond || cond(c)); })[0] || null;
+            };
+            var hBase = cab('base'), hIva = cab('iva'), hTot = cab('total');
+            if (!hBase || !hIva || !hTot) { return; }
+            var hOri = cab('origen', function (c) { return c.x < hBase.x; });
+            var hAnt = cab('origen anterior', function (c) { return c.x < hBase.x; });
+            var hImp = cab('importe', function (c) { return c.x > hTot.x; });
+            var hForma = its.filter(function (c) { return /^forma/.test(normT(c.s)) && Math.abs(c.y - hy) < 10 && c.x > hTot.x; })[0] || null;
+            var hFecP = hImp ? (its.filter(function (c) { return normT(c.s) === 'fecha' && Math.abs(c.y - hy) < 4 && c.x > hImp.x; })[0] || null) : null;
+            var cols = [];
+            if (hOri) { cols.push({ k: 'origen', c: cx(hOri) }); }
+            if (hAnt) { cols.push({ k: 'anterior', c: cx(hAnt) }); }
+            cols.push({ k: 'base', c: cx(hBase) }, { k: 'iva', c: cx(hIva) }, { k: 'total', c: cx(hTot) });
+            if (hImp) { cols.push({ k: 'cobrado', c: cx(hImp) }); }
+            var columnaDe = function (c) {
+                var m = cx(c), mejor = null, d = 1e9;
+                cols.forEach(function (q) { var dd = Math.abs(q.c - m); if (dd < d) { d = dd; mejor = q.k; } });
+                return mejor;
+            };
+            var izq = its.filter(function (c) { return c.x < 526 && c.y < hy - 4; }).sort(function (a, b) { return b.y - a.y; });
+            var grupos = [];
+            izq.forEach(function (c) {
+                var g = grupos.filter(function (q) { return Math.abs(q.y - c.y) <= 3; })[0];
+                if (!g) { g = { y: c.y, it: [] }; grupos.push(g); }
+                g.it.push(c);
+            });
+            grupos.sort(function (a, b) { return b.y - a.y; });
+            var empezado = false;
+            for (var gi = 0; gi < grupos.length; gi++) {
+                var g = grupos[gi];
+                var cod = g.it.filter(function (c) { return /^\d{1,3}-\d{1,4}$/.test(String(c.s).trim()) && c.x > hFac.x - 20 && c.x < hCon.x - 5; })[0];
+                if (!cod) { if (empezado) { break; } continue; }
+                empezado = true;
+                var f = { factura: String(cod.s).trim(), fecha: '', concepto: '', origen: null, origenTxt: '', base: null, iva: null, total: null, forma: '', cobrado: null, fechaPago: '' };
+                f.fecha = unir(g.it.filter(function (c) { return !esNum(c) && !esPct(c) && c.x >= 60 && c.x < hFac.x - 5; }));
+                var limCon = hForma ? hForma.x - 5 : cx(hTot) + 30;
+                f.concepto = unir(g.it.filter(function (c) { return !esNum(c) && !esPct(c) && c.x >= hCon.x - 45 && c.x < limCon; }));
+                if (hForma) {
+                    var limForma = hImp ? hImp.x - 5 : 9999;
+                    f.forma = unir(g.it.filter(function (c) { return !esNum(c) && c.x >= hForma.x - 8 && c.x < limForma; }));
+                }
+                if (hFecP) { f.fechaPago = unir(g.it.filter(function (c) { return !esNum(c) && c.x >= hFecP.x - 12; })); }
+                g.it.forEach(function (c) {
+                    if (esNum(c)) {
+                        var k = columnaDe(c);
+                        if (k === 'origen' || k === 'base' || k === 'iva' || k === 'total' || k === 'cobrado') { f[k] = toNum(c.s); }
+                    } else if (esPct(c) && columnaDe(c) === 'origen') {
+                        f.origenTxt = String(c.s).replace(/\s+/g, '').replace('%', ' %');
+                    }
+                });
+                salida.push(f);
+            }
+        });
+        return salida;
+    }
+
+    function tablaFacturasFicha(seg) {
+        if (!seg || !seg.facturas || !seg.facturas.length) { return ''; }
+        var fm = function (n) { if (n === null || n === undefined || isNaN(n)) { return ''; } var p = Math.abs(n).toFixed(2).split('.'); return (n < 0 ? '-' : '') + p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + p[1] + ' €'; };
+        var sb = 0, si = 0, st = 0, sc = 0;
+        seg.facturas.forEach(function (x) { sb += x.base || 0; si += x.iva || 0; st += x.total || 0; sc += x.cobrado || 0; });
+        return '<div class="val-det"><b>Relación de facturas emitidas (leída de la ficha)</b><table><thead><tr><th>Factura</th><th>Fecha</th><th>Concepto</th><th>Base</th><th>IVA</th><th>Total</th><th>Cobrado</th><th>Fecha pago</th></tr></thead><tbody>' +
+            seg.facturas.map(function (x) {
+                return '<tr><td>' + esc(x.factura) + '</td><td>' + esc(x.fecha) + '</td><td>' + esc(x.concepto) + '</td><td>' + fm(x.base) + '</td><td>' + fm(x.iva) + '</td><td>' + fm(x.total) + '</td><td>' + fm(x.cobrado) + '</td><td>' + esc(x.fechaPago) + '</td></tr>';
+            }).join('') +
+            '<tr class="tot"><td>Totales</td><td></td><td></td><td>' + fm(sb) + '</td><td>' + fm(si) + '</td><td>' + fm(st) + '</td><td>' + fm(sc) + '</td><td></td></tr></tbody></table></div>';
+    }
+
     function aplicarDetalleFicha(res, crudos) {
         var o = leerDetalleFicha(crudos);
         res.avisos = res.avisos || [];
@@ -3730,6 +3862,20 @@ button:disabled { opacity: .6; cursor: default; }
             res.avisos.push('No se ha encontrado la tabla «Detalle obra ejecutada» en la ficha; el bloque 3 usará la certificación.');
         }
         if (Object.keys(o.resumen).length) { res.resumen = o.resumen; }
+        try {
+            var fa = leerFacturasFicha(crudos);
+            if (fa.length) {
+                res.facturas = fa;
+                var sTot = 0;
+                fa.forEach(function (x) { sTot += x.total || 0; });
+                var fe = res.resumen && res.resumen.facturasEmitidas;
+                if (fe && fe.total != null && !isNaN(fe.total) && Math.abs(sTot - fe.total) > 0.1) {
+                    res.avisos.push('Relación de facturas emitidas: la suma de los totales (' + sTot.toFixed(2) + ') no coincide con las facturas emitidas del cuadro de la ficha (' + fe.total.toFixed(2) + ').');
+                }
+            } else {
+                res.avisos.push('No se ha encontrado la tabla «Relación de facturas emitidas» en la ficha; Certificaciones quincenales no mostrará el listado de facturas.');
+            }
+        } catch (eFac) { res.avisos.push('No se pudo leer la relación de facturas emitidas: ' + eFac.message); }
     }
 
     function tablaDetalleFicha(seg) {
@@ -4014,7 +4160,7 @@ button:disabled { opacity: .6; cursor: default; }
                         '</label>';
                 }
                 partes.push(tarjetaCabecera('Ficha de seguimiento económico (PDF 3)', 'Los 7 KPIs clave del cuadro financiero de obra.',
-                    '<div class="val-grid-3">' + celdas + '</div>' + tablaDetalleFicha(seg), seg, 'pdf3'));
+                    '<div class="val-grid-3">' + celdas + '</div>' + tablaDetalleFicha(seg) + tablaFacturasFicha(seg), seg, 'pdf3'));
             } catch (err) { partes.push(bloqueFallo('Ficha de seguimiento económico (PDF 3)', seg, err)); }
         }
 

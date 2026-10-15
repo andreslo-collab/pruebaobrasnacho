@@ -510,6 +510,30 @@ button:disabled { opacity: .6; cursor: default; }
 .se-sc-neg b { color: #ffd9b8; }
 .se-sc-neg small { color: #8d9298; }
 @media print { .kpi.k-neg, .se-card.se-c-neg, .se-panel.se-sc-neg { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+
+/* pendientes unificados: una sola tarjeta blanca, cifras en rojo */
+.kpi.k-pend2 { grid-column: span 2; flex-direction: row; gap: 0; padding: 0; background: #fff; border-color: #e3e5e8; }
+.kpi-pp { flex: 1; display: flex; flex-direction: column; gap: 4px; padding: 14px; min-width: 0; }
+.kpi-pp + .kpi-pp { border-left: 1px solid #e3e5e8; }
+.kpi.k-pend2 .kpi-v { color: #c62828; }
+.se-card.se-c-pend2 { grid-column: span 2; background: #fff; }
+.se-card.se-c-pend2::before { display: none; }
+.se-pp2 { display: flex; gap: 0; }
+.se-pp { flex: 1; min-width: 0; padding-right: 18px; }
+.se-pp + .se-pp { padding-right: 0; padding-left: 18px; border-left: 1px solid var(--se-bd); }
+.se-c-pend2 .se-card-v { color: #c62828; }
+.se-panel.se-sc-pend2 { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0; background: #fff; }
+.se-sc-pend2 > div { flex: 1 1 240px; min-width: 0; }
+.se-sc-pend2 > div + div { border-left: 1px solid #e3e5e8; padding-left: 20px; }
+.se-sc-pend2 b { color: #c62828; }
+@media (max-width: 700px) {
+  .kpi.k-pend2, .se-card.se-c-pend2 { grid-column: auto; }
+  .kpi.k-pend2, .se-pp2 { flex-direction: column; }
+  .kpi-pp + .kpi-pp { border-left: 0; border-top: 1px solid #e3e5e8; }
+  .se-pp { padding-right: 0; }
+  .se-pp + .se-pp { padding-left: 0; border-left: 0; border-top: 1px solid var(--se-bd); margin-top: 14px; padding-top: 14px; }
+  .se-sc-pend2 > div + div { border-left: 0; padding-left: 0; border-top: 1px solid #e3e5e8; margin-top: 12px; padding-top: 12px; }
+}
 /*__CSS_FIN__*/
 </style>
 </head>
@@ -2166,6 +2190,13 @@ button:disabled { opacity: .6; cursor: default; }
             (nota ? '<span class="kpi-n">' + esc(nota) + '</span>' : '') + '</div>';
     }
 
+    function kpiPar(t1, v1, n1, t2, v2, n2) {
+        var una = function (t, v, n) {
+            return '<div class="kpi-pp"><span class="kpi-t">' + esc(t) + '</span><span class="kpi-v">' + esc(v) + '</span>' + (n ? '<span class="kpi-n">' + esc(n) + '</span>' : '') + '</div>';
+        };
+        return '<div class="kpi k-pend2">' + una(t1, v1, n1) + una(t2, v2, n2) + '</div>';
+    }
+
     function tabla(headers, filas, alineaciones) {
         var h = '<tr>' + headers.map(function (t, i) {
             return '<th class="' + ((alineaciones && alineaciones[i]) || '') + '">' + esc(t) + '</th>';
@@ -2298,8 +2329,8 @@ button:disabled { opacity: .6; cursor: default; }
         var html = '<div class="kpis">' +
             kpi('Certificado acumulado', fmtPct(k.pctCert), 'sobre ' + fmtMoney(k.pem), 'k-cyan') +
             kpi('Total certificado', fmtMoney(k.cert), k.certTotal ? 'con IVA: ' + fmtMoney(k.certTotal) : null) +
-            kpi('Pendiente de certificar', fmtMoney(k.pendCert), 'según ficha de seguimiento', 'k-neg') +
-            kpi('Pendiente de facturar', fmtMoney(k.pendFact), 'según ficha de seguimiento', 'k-neg') +
+            kpiPar('Pendiente de certificar', fmtMoney(k.pendCert), 'según ficha de seguimiento', 'Pendiente de facturar', fmtMoney(k.pendFact), 'según ficha de seguimiento') +
+            '' +
             kpi('Saldo a favor de ENUE', fmtMoney(k.saldo), 'facturado − cobrado', 'k-saldo') +
             kpi('Factura de la quincena', fmtMoney(k.facturaTotal),
                 D.factura && D.factura.ident && D.factura.ident.numero ? 'nº ' + D.factura.ident.numero : null) +
@@ -2417,6 +2448,12 @@ button:disabled { opacity: .6; cursor: default; }
             return '<div class="se-card ' + mod + '"><div class="se-card-in"><span class="se-card-t">' + esc(tit) + '</span>' +
                 '<div class="se-card-v">' + esc(valor) + '</div>' + (pie ? '<div class="se-card-p">' + pie + '</div>' : '') + '</div></div>';
         };
+        var cardPar = function (t1, v1, p1, t2, v2, p2) {
+            var una = function (t, v, p) {
+                return '<div class="se-pp"><span class="se-card-t">' + esc(t) + '</span><div class="se-card-v">' + esc(v) + '</div>' + (p ? '<div class="se-card-p">' + p + '</div>' : '') + '</div>';
+            };
+            return '<div class="se-card se-c-pend2"><div class="se-card-in se-pp2">' + una(t1, v1, p1) + una(t2, v2, p2) + '</div></div>';
+        };
         var mon = function (v) { return v === null ? '—' : fmtMoney(v); };
 
         var obraNom = (s.ident && s.ident.obra) || D.identificador || '';
@@ -2466,8 +2503,8 @@ button:disabled { opacity: .6; cursor: default; }
             card('Obra ejecutada a origen', mon(ejec), 'se-c-ok',
                 '<span>' + (det ? 'Según ficha de seguimiento' : 'Según certificación a origen') + '</span>' + (pctAv !== null ? '<strong class="se-chip-ok">~' + fmtNum(pctAv, 2) + ' %</strong>' : '')) +
             card('Facturación emitida', mon(emit), 'se-c-pri', pagos !== null ? '<span>Pagos recibidos:</span><strong>' + fmtMoney(pagos) + '</strong>' : '') +
-            card('Pendiente de certificar', mon(pendCert), 'se-c-neg', pieFicha('pendienteCertificar', pendCert)) +
-            card('Pendiente de facturar', mon(pendFact), 'se-c-neg', pieFicha('pendienteFacturar', pendFact)) +
+            cardPar('Pendiente de certificar', mon(pendCert), pieFicha('pendienteCertificar', pendCert), 'Pendiente de facturar', mon(pendFact), pieFicha('pendienteFacturar', pendFact)) +
+            '' +
             (saldo !== null ? '<div class="se-card se-c-red"><div class="se-card-in"><span class="se-card-t">Saldo actual a favor de ENUE</span>' +
                 '<div class="se-card-v">' + esc(fmtMoney(saldo)) + '</div>' +
                 '<div class="se-card-p"><span>' + (fi.numero ? 'Factura ' + esc(fi.numero) : 'Según ficha de seguimiento') + '</span></div></div></div>' : '') +
@@ -2583,8 +2620,8 @@ button:disabled { opacity: .6; cursor: default; }
                 '<div class="se-red"><div class="se-red-h"><div><span>Posición acreedora actual</span><h3>TOTAL SALDO A FAVOR DE ENUE</h3></div>' +
                 '<div class="se-red-v">' + esc(fmtMoney(saldo)) + '</div></div><p>' + txtSaldo + '</p></div>' +
                 '<div class="se-2b">' +
-                '<div class="se-panel se-sc se-sc-neg"><div><span>Pendiente de certificar</span><b>' + esc(mon(pendCert)) + '</b>' + (conIva(pendCert) !== null ? '<small>Con IVA: ' + esc(fmtMoney(conIva(pendCert))) + '</small>' : '') + '</div></div>' +
-                '<div class="se-panel se-sc se-sc-neg"><div><span>Pendiente de facturar</span><b>' + esc(mon(pendFact)) + '</b>' + (conIva(pendFact) !== null ? '<small>Con IVA: ' + esc(fmtMoney(conIva(pendFact))) + '</small>' : '') + '</div></div>' +
+                '<div class="se-panel se-sc se-sc-pend2"><div><span>Pendiente de certificar</span><b>' + esc(mon(pendCert)) + '</b>' + (conIva(pendCert) !== null ? '<small>Con IVA: ' + esc(fmtMoney(conIva(pendCert))) + '</small>' : '') + '</div>' +
+                '<div><span>Pendiente de facturar</span><b>' + esc(mon(pendFact)) + '</b>' + (conIva(pendFact) !== null ? '<small>Con IVA: ' + esc(fmtMoney(conIva(pendFact))) + '</small>' : '') + '</div></div>' +
                 '</div></section>';
         }
 

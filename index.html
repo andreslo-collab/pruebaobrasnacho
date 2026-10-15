@@ -4583,29 +4583,65 @@ button:disabled { opacity: .6; cursor: default; }
 
     function hayValor(v) { return v !== null && v !== undefined && !isNaN(v); }
 
-    /** Asunto y cuerpo del correo, con el resumen del dashboard y el enlace. */
+    /** Cuenta de ingreso que aparece en el correo (editable en el propio mensaje). */
+    var CUENTA_INGRESO = 'BSCH: ES60-0049-4409-3325-1002-7233';
+    var MESES_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+    function capitalizar(s) {
+        if (s === s.toUpperCase()) { s = s.toLowerCase().replace(/(^|\s)(\S)/g, function (x, a, b) { return a + b.toUpperCase(); }); }
+        return s;
+    }
+
+    function saludoCliente(D) {
+        var c = (D.certificacion && D.certificacion.ident && D.certificacion.ident.cliente) ||
+            (D.factura && D.factura.ident && D.factura.ident.cliente) ||
+            (D.seguimiento && D.seguimiento.ident && D.seguimiento.ident.cliente) || '';
+        var m = String(c).match(/^\s*(D|Dña|Doña|Dona)\.?\s+([^-–—,]+?)\s*(?:[-–—,]|$)/);
+        if (!m) { return 'Buenos días,'; }
+        var palabras = m[2].trim().split(/\s+/);
+        if (palabras.length < 2) { return 'Buenos días,'; }
+        var ape = capitalizar(palabras.slice(1).join(' '));
+        return 'Buenos días ' + (m[1].length > 1 ? 'Sra. ' : 'Sr. ') + ape + ',';
+    }
+
+    function fechaEjecucion(D, per) {
+        var m = String(per || '').match(/([12])\s*[ªaº°.]?\s*quincena\s+de\s+([a-záéíóú]+)\s+de\s+(\d{4})/i);
+        if (m) {
+            var mi = MESES_ES.indexOf(m[2].toLowerCase());
+            if (mi >= 0) {
+                var anio = +m[3];
+                var dia = m[1] === '1' ? 15 : new Date(anio, mi + 1, 0).getDate();
+                return dia + ' de ' + MESES_ES[mi] + ' de ' + anio;
+            }
+        }
+        var f = D.certificacion && D.certificacion.ident && D.certificacion.ident.fecha;
+        return f ? String(f) : '';
+    }
+
+    /** Asunto y cuerpo del correo con el texto habitual de envío de certificación y el enlace. */
     function textoCorreo(url) {
         var D = datos() || {};
         var k = DXReport.kpisCabecera(D);
-        var obra = state.identificador || D.identificador || 'la obra';
+        var cert = (D.certificacion && D.certificacion.ident) || {};
+        var seg = (D.seguimiento && D.seguimiento.ident) || {};
+        var obra = String(cert.obra || seg.obra || state.identificador || D.identificador || 'su obra').replace(/[\s.,;:]+$/, '');
         var per = state.periodo || D.periodo || '';
-        var l = [];
-        if (hayValor(k.pem)) { l.push('- Presupuesto: ' + fmtMoney(k.pem)); }
-        if (hayValor(k.cert)) { l.push('- Certificado a origen: ' + fmtMoney(k.cert) + (hayValor(k.pctCert) ? ' (' + fmtPct(k.pctCert) + ')' : '')); }
-        if (hayValor(k.pendCert)) { l.push('- Pendiente de certificar: ' + fmtMoney(k.pendCert)); }
-        if (hayValor(k.pendFact)) { l.push('- Pendiente de facturar: ' + fmtMoney(k.pendFact)); }
-        if (hayValor(k.saldo)) { l.push('- Saldo a favor de ENUE: ' + fmtMoney(k.saldo)); }
-        if (hayValor(k.facturaTotal)) {
-            var num = D.factura && D.factura.ident && D.factura.ident.numero ? D.factura.ident.numero : '';
-            l.push('- Factura de la quincena: ' + fmtMoney(k.facturaTotal) + (num ? ' (nº ' + num + ')' : ''));
-        }
-        var cuerpo = 'Buenos días,\n\n' +
-            'Les remitimos el informe de seguimiento de la obra ' + obra + (per ? ', correspondiente a ' + per : '') + '.\n\n' +
-            (l.length ? 'Resumen:\n' + l.join('\n') + '\n\n' : '') +
-            'Pueden consultar el informe completo en este enlace:\n' + url + '\n\n' +
-            'Quedamos a su disposición para cualquier aclaración.\n\n' +
-            'Un saludo,\nENUE Proyectos y Construcción';
-        return { asunto: 'Seguimiento de obra ' + obra + (per ? ' · ' + per : ''), cuerpo: cuerpo };
+        var mn = String(cert.certificacion || '').match(/\d+/);
+        var n = mn ? mn[0] : '';
+        var fecha = fechaEjecucion(D, per);
+        var cuerpo = saludoCliente(D) + '\n\n' +
+            'A continuación, le adjunto la documentación correspondiente a la certificación' + (n ? ' nº' + n : '') +
+            (fecha ? ' sobre una ejecución de obra a fecha ' + fecha : '') + '.\n\n' +
+            'Tras la revisión de los trabajos ejecutados y materiales suministrados en su Proyecto: ' + obra +
+            ', tal como establece el contrato vigente, le presentamos la correspondiente factura.\n\n' +
+            'Acompañando a dicha factura se adjunta la certificación técnica detallada y desglosada a origen, emitida por nuestro departamento de producción / arquitectura, junto con Presupuesto general de obra actualizado, y ficha de seguimiento económico.\n\n' +
+            'Puede consultar el seguimiento completo de la obra en este enlace:\n' + url + '\n\n' +
+            'Pueden realizar el ingreso, en la cuenta corriente que figura en la propia factura y a continuación se detalla.\n\n' +
+            (hayValor(k.facturaTotal) ? fmtMoney(k.facturaTotal) + '\n' : '') +
+            CUENTA_INGRESO + '\n\n' +
+            'Ante cualquier consulta/aclaración no dude en ponerse en contacto con nosotros, estamos a su entera disposición.\n\n' +
+            'Atentamente,';
+        return { asunto: 'Certificación' + (n ? ' nº' + n : '') + ' · ' + obra + (fecha ? ' · ' + fecha : ''), cuerpo: cuerpo };
     }
 
     function bloqueCorreo(r) {
@@ -4613,11 +4649,11 @@ button:disabled { opacity: .6; cursor: default; }
         var t = textoCorreo(r.url);
         return '<div class="correo-box">' +
             '<span class="compartir-t">Correo al cliente</span>' +
-            '<p class="nota-pie">Se abre tu correo con el mensaje ya escrito. Lo revisas y lo envías tú desde tu cuenta; la aplicación no envía nada por su cuenta.</p>' +
+            '<p class="nota-pie">Se abre tu correo con el mensaje ya escrito. Lo revisas y lo envías tú desde tu cuenta; la aplicación no envía nada por su cuenta. Los documentos (factura, certificación, presupuesto y ficha) los adjuntas tú en tu correo.</p>' +
             '<label class="correo-lab">Para<input type="text" id="correo-para" placeholder="cliente@empresa.com" value="' + esc(g.para || '') + '"></label>' +
             '<label class="correo-lab">Con copia (opcional)<input type="text" id="correo-cc" placeholder="direccion@enue.es" value="' + esc(g.cc || '') + '"></label>' +
             '<label class="correo-lab">Asunto<input type="text" id="correo-asunto" value="' + esc(t.asunto) + '"></label>' +
-            '<label class="correo-lab">Mensaje<textarea id="correo-cuerpo" rows="14">' + esc(t.cuerpo) + '</textarea></label>' +
+            '<label class="correo-lab">Mensaje<textarea id="correo-cuerpo" rows="22">' + esc(t.cuerpo) + '</textarea></label>' +
             '<div class="chips">' +
             '<button class="btn-primario" id="btn-correo-mailto">Preparar correo</button>' +
             '<button class="btn-sec" id="btn-correo-gmail">Abrir en Gmail</button>' +

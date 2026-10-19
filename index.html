@@ -1189,7 +1189,16 @@ button:disabled { opacity: .6; cursor: default; }
 
     /* ------------------------------------------------------ CERTIFICACIÓN (PDF) */
 
+    function normalizarLineaCert(t) {
+        t = String(t == null ? '' : t);
+        var A = '(?:€\\s*)?-?[0-9][0-9.]*,[0-9]+(?:\\s*€)?';
+        var m = t.match(new RegExp('^\\s*((?:' + A + '\\s*){1,3})(Totales\\b.*|Total\\s+(?:Sub)?Cap[ií]tulo\\b.*)$', 'i'));
+        if (m) { t = m[2].replace(/\s+$/, '') + ' ' + m[1].replace(/€/g, ' ').replace(/\s+/g, ' ').trim(); }
+        return t;
+    }
+
     function parseCertification(lines, opts) {
+        lines = (lines || []).map(function (l) { return normalizarLineaCert(typeof l === 'string' ? l : analyseRow(l).text); });
         var text = lines.join('\n');
         var res = {
             tipo: 'certificacion',
@@ -1208,7 +1217,11 @@ button:disabled { opacity: .6; cursor: default; }
         // línea y pegado a la etiqueta (en estos PDFs el campo suele venir vacío
         // y una búsqueda laxa captura números de descripciones: "menor de 3,5 m").
         var reCert = /n[ºo°]\s*:?\s{0,3}(\d{1,4})(?![\d,.])/i;
-        for (var li = 0; li < Math.min(lines.length, 60); li++) {
+        for (var lp = 0; lp < Math.min(lines.length, 60) && !res.ident.certificacion; lp++) {
+            var lcp = String(lines[lp]).match(/Certificaci[oó]n\s*n[ºo°]\.?\s*:?\s{0,3}(\d{1,4})(?![\d,.])/i);
+            if (lcp) { res.ident.certificacion = lcp[1]; }
+        }
+        for (var li = 0; li < Math.min(lines.length, 60) && !res.ident.certificacion; li++) {
             var ltxt = typeof lines[li] === 'string' ? lines[li] : analyseRow(lines[li]).text;
             var lc = ltxt.match(reCert);
             if (lc) { res.ident.certificacion = lc[1]; break; }
@@ -1223,7 +1236,17 @@ button:disabled { opacity: .6; cursor: default; }
         var tailText = tail.join('\n');
         var m2;
         // "Totales  9.999,129 €  9.999,129 €"  (puede venir en una sola linea)
-        for (var ti = tail.length - 1; ti >= 0; ti--) {
+        for (var t3 = tail.length - 1; t3 >= 0 && !res._tot3; t3--) {
+            var m3 = String(tail[t3]).replace(/€/g, ' ').match(/^\s*Totales\s+(-?[0-9][0-9.]*,[0-9]{2})\s+(-?[0-9][0-9.]*,[0-9]{2})\s+(-?[0-9][0-9.]*,[0-9]{2})\s*$/i);
+            if (m3) {
+                res._tot3 = true;
+                res.totales.origen = numDec(m3[1]);
+                res.totales.anterior = numDec(m3[2]);
+                res.totales.actual = numDec(m3[3]);
+                res._origenTexto = m3[1];
+            }
+        }
+        for (var ti = tail.length - 1; ti >= 0 && !res._tot3; ti--) {
             m2 = String(tail[ti]).match(/^\s*Totales?\s+(-?[0-9][0-9.]*[.,][0-9]+)\s*€?\s+(-?[0-9][0-9.]*[.,][0-9]+)\s*€?/i);
             if (m2) {
                 res.totales.anterior = num(m2[1]);
@@ -1235,6 +1258,7 @@ button:disabled { opacity: .6; cursor: default; }
             }
         }
         m = tailText.match(/Total\s+Ejecuci[oó]n\s*:?\s*(-?[0-9][0-9.]*[.,][0-9]+)/i);
+        if (res._tot3) { res._ejec = m ? numDec(m[1]) : null; m = null; }
         if (m) {
             res.totales.origen = numDec(m[1]);
             res.totales.origenAlt = numMiles(m[1]);
@@ -1269,7 +1293,7 @@ button:disabled { opacity: .6; cursor: default; }
 
         // --- desambiguacion de la coma de 3 cifras usando la aritmetica del
         // propio documento:  Origen + IVA  debe dar el Total declarado.
-        if (res.totales.origen != null && res.totales.total != null) {
+        if (!res._tot3 && res.totales.origen != null && res.totales.total != null) {
             var candO = [numDec(res._origenTexto || ''), numMiles(res._origenTexto || '')];
             var candI = [res._ivaDec, res._ivaMiles];
             var candT = [res.totales.totalDec, res.totales.totalMiles];
@@ -1293,6 +1317,14 @@ button:disabled { opacity: .6; cursor: default; }
                 res._cuadre = mejor.err < 0.02 ? 'exacto' : (mejor.err < 1 ? 'redondeo' : 'revisar');
             }
         }
+        if (res._tot3) {
+            var mIv = tailText.match(/(-?[0-9][0-9.]*,[0-9]{2})[ \t]*€?[ \t]*I\.?V\.?A\.?\s*\(/i) || tailText.match(/I\.?V\.?A\.?\s*\([^)]*\)[ \t]*:?[ \t]*(-?[0-9][0-9.]*,[0-9]{2})/i);
+            if (mIv) { res.totales.iva = numDec(mIv[1]); }
+            else if (res.totales.ivaPct != null) { res.totales.iva = +(res.totales.actual * res.totales.ivaPct / 100).toFixed(2); }
+            if (res.totales.total == null) { res.totales.total = +((res.totales.actual || 0) + (res.totales.iva || 0)).toFixed(2); }
+            var errT = Math.abs((res.totales.actual || 0) + (res.totales.iva || 0) - res.totales.total);
+            res._cuadre = errT < 0.02 ? 'exacto' : (errT < 1 ? 'redondeo' : 'revisar');
+        }
         if (res.totales.iva == null && res.totales.origen != null && res.totales.ivaPct != null) {
             res.totales.iva = +(res.totales.origen * res.totales.ivaPct / 100).toFixed(3);
         }
@@ -1305,6 +1337,7 @@ button:disabled { opacity: .6; cursor: default; }
 
         // --- capítulos y subcapítulos
         var totalesCap = {};
+        var ordenCap = [];
         // Columnas del cuadro de capítulos (orden en que aparecen en la cabecera del PDF)
         var colsHeader = [];
         for (var hi = 0; hi < lines.length && !colsHeader.length; hi++) {
@@ -1331,23 +1364,28 @@ button:disabled { opacity: .6; cursor: default; }
         for (var i = 0; i < lines.length; i++) {
             var line = typeof lines[i] === 'string' ? lines[i] : analyseRow(lines[i]).text;
             if (!line) { continue; }
-            var mc = line.match(/^Total\s+Cap[ií]tulo\s+(\d{2})(?:\s*\(.*?\))?\s*-\s*(.*?)(?:\s+(-?[0-9][0-9.,]*)\s+(-?[0-9][0-9.,]*))?\s*$/);
+            var mc = line.match(/^Total\s+Cap[ií]tulo\s+([A-Za-z0-9]{2,4})(?:\s*\(.*?\))?\s*-\s*(.*?)(?:\s+(-?[0-9][0-9.,]*)\s+(-?[0-9][0-9.,]*))?\s*$/);
             if (mc) {
                 var vals = [];
                 if (mc[3] != null) { vals.push(numDec(mc[3])); }
                 if (mc[4] != null) { vals.push(numDec(mc[4])); }
-                var mn = line.match(/^Total\s+Cap[ií]tulo\s+(\d{2})(?:\s*\(.*?\))?\s*-\s*(.*?)((?:\s+-?[0-9][0-9.]*[.,][0-9]+)*)\s*$/);
+                var mn = line.match(/^Total\s+Cap[ií]tulo\s+([A-Za-z0-9]{2,4})(?:\s*\(.*?\))?\s*-\s*(.*?)((?:\s+-?[0-9][0-9.]*[.,][0-9]+)*)\s*$/);
                 var nums = [];
                 if (mn && mn[3]) { mn[3].trim().split(/\s+/).forEach(function (s0) { var v0 = numDec(s0); if (v0 !== null && v0 !== undefined) { nums.push(v0); } }); }
                 var cm = columnasMesOrigen(nums);
+                var tri = null;
+                if (res._tot3 && nums.length >= 3) { tri = { origen: nums[nums.length - 3], anterior: nums[nums.length - 2], actual: nums[nums.length - 1] }; }
+                else if (res._tot3 && nums.length === 2) { tri = { origen: nums[0], anterior: nums[1], actual: 0, dos: true }; }
+                if (!totalesCap[mc[1]]) { ordenCap.push(mc[1]); }
                 totalesCap[mc[1]] = {
                     codigo: mc[1],
                     descripcion: clean(mn ? mn[2] : mc[2]),
-                    anterior: vals.length > 1 ? vals[0] : null,
-                    actual: vals.length ? vals[vals.length - 1] : null,
+                    anterior: tri ? tri.anterior : (vals.length > 1 ? vals[0] : null),
+                    actual: tri ? tri.actual : (vals.length ? vals[vals.length - 1] : null),
                     importes: vals,
-                    mes: cm.mes,
-                    origen: cm.origen
+                    mes: tri ? (tri.actual || null) : cm.mes,
+                    origen: tri ? tri.origen : cm.origen,
+                    columnas3: tri ? true : undefined
                 };
                 continue;
             }
@@ -1371,7 +1409,32 @@ button:disabled { opacity: .6; cursor: default; }
                 });
             }
         }
-        res.capitulos = Object.keys(totalesCap).sort().map(function (k) { return totalesCap[k]; });
+        res.capitulos = (res._tot3 ? ordenCap : Object.keys(totalesCap).sort()).map(function (k) { return totalesCap[k]; });
+
+        if (res._tot3 && res.capitulos.length) {
+            var hdr = {};
+            lines.forEach(function (l0) {
+                var h1 = l0.match(/^(\d{3})\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ \/,.()-]{3,70})$/);
+                var h2 = l0.match(/^([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ \/,.()-]{3,70}?)(\d{3})$/);
+                if (h1) { hdr[h1[1]] = clean(h1[2]); } else if (h2) { hdr[h2[2]] = clean(h2[1]); }
+            });
+            var faltan = Object.keys(hdr).filter(function (k0) { return !totalesCap[k0]; });
+            var sO0 = 0, sA0 = 0, sC0 = 0;
+            res.capitulos.forEach(function (c0) { sO0 += c0.origen || 0; sA0 += c0.anterior || 0; sC0 += c0.actual || 0; });
+            if (faltan.length === 1 && Math.abs(sO0 - res.totales.origen) > 0.05) {
+                var kf = faltan[0];
+                var dO = +(res.totales.origen - sO0).toFixed(2), dA = +(res.totales.anterior - sA0).toFixed(2), dC = +(res.totales.actual - sC0).toFixed(2);
+                var cNew = { codigo: kf, descripcion: hdr[kf], anterior: dA, actual: dC, importes: [], mes: dC || null, origen: dO, columnas3: true, porDiferencia: true };
+                var ix = res.capitulos.length;
+                for (var q = 0; q < res.capitulos.length; q++) { if (/^\d+$/.test(res.capitulos[q].codigo) && res.capitulos[q].codigo > kf) { ix = q; break; } }
+                res.capitulos.splice(ix, 0, cNew);
+                res.avisos.push('El capítulo ' + kf + ' (' + hdr[kf] + ') no trae línea de total en el PDF: su importe se ha calculado por diferencia con los totales (' + dO.toFixed(2).replace('.', ',') + ' € a origen).');
+            }
+            var sO = 0, sA = 0;
+            res.capitulos.forEach(function (c0) { sO += c0.origen || 0; sA += c0.actual || 0; });
+            if (Math.abs(sA - res.totales.actual) > 0.05) { res.avisos.push('Los capítulos leídos no suman la columna ACTUAL del total (' + sA.toFixed(2) + ' frente a ' + res.totales.actual.toFixed(2) + '). Revisa la validación.'); }
+            if (Math.abs(sO - res.totales.origen) > 0.05) { res.avisos.push('Los capítulos leídos no suman la columna ORIGEN del total (' + sO.toFixed(2) + ' frente a ' + res.totales.origen.toFixed(2) + '). Revisa la validación.'); }
+        }
 
         if (!res.capitulos.length && !res.partidas.length) {
             res.avisos.push('No se han reconocido partidas ni capítulos en la certificación.');

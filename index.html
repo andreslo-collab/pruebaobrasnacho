@@ -593,6 +593,16 @@ button:disabled { opacity: .6; cursor: default; }
 .pg-verde { color: #15803d; } .pg-ambar { color: #b45309; } .pg-rojo { color: #c62828; }
 @media (max-width: 700px) { .pg-fila { grid-template-columns: 1fr; gap: 4px; } }
 @media print { .pg-fila { break-inside: avoid; } }
+
+/* ===== barra de secciones en una sola línea ===== */
+.tabs-linea { display: flex; flex-wrap: nowrap; align-items: stretch; margin: 0 -28px; padding: 0 28px; background: linear-gradient(135deg, #0a0b0c, #131415); border-bottom: 1px solid rgba(255,255,255,.08); overflow-x: auto; scrollbar-width: none; }
+.tabs-linea::-webkit-scrollbar { display: none; }
+.dash-cabecera + .tabs-linea { margin-top: -16px; border-top: 0; }
+.tabs-linea .tab { flex: 1 1 auto; text-align: center; white-space: nowrap; background: transparent; border: 0; border-bottom: 3px solid transparent; border-radius: 0; padding: 15px 14px 12px; font-size: 12.5px; font-weight: 600; letter-spacing: .01em; color: #aeb2b8; transition: color .15s, background .15s, border-color .15s; }
+.tabs-linea .tab:hover { background: rgba(255,255,255,.06); color: #fff; }
+.tabs-linea .tab.activa { background: rgba(255,255,255,.04); color: #fff; border-bottom-color: #fff; }
+.tabs-linea .tab:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }
+@media print { .tabs-linea { display: none !important; } }
 /*__CSS_FIN__*/
 </style>
 </head>
@@ -3230,18 +3240,13 @@ button:disabled { opacity: .6; cursor: default; }
         return fn(D || {}, filtros || {});
     }
 
-    /** Menú desplegable con todas las pestañas (los botones .tab conservan data-tab). */
+    /** Barra de secciones en una sola línea (los botones .tab conservan data-tab). */
     function menuPestanas(activa) {
-        var etq = '', idx = 0;
-        var items = PESTANAS.map(function (t, i) {
+        var items = PESTANAS.map(function (t) {
             var on = t.id === activa;
-            if (on) { etq = t.etiqueta; idx = i + 1; }
-            return '<button type="button" class="tab' + (on ? ' activa' : '') + '" data-tab="' + t.id + '">' +
-                '<span class="tab-n">' + (i < 9 ? '0' : '') + (i + 1) + '</span><span>' + esc(t.etiqueta) + '</span></button>';
+            return '<button type="button" class="tab' + (on ? ' activa' : '') + '" data-tab="' + t.id + '">' + esc(t.etiqueta) + '</button>';
         }).join('');
-        return '<details class="tabs-menu"><summary><span class="tm-lab">Sección</span>' +
-            '<strong>' + esc(etq) + '</strong><span class="tm-cnt">' + idx + ' / ' + PESTANAS.length + '</span>' +
-            '<span class="tm-chev"></span></summary><div class="tm-panel">' + items + '</div></details>';
+        return '<nav class="tabs-linea" aria-label="Secciones del informe">' + items + '</nav>';
     }
 
     /** Cierra el menú al pulsar fuera o con Escape (se registra una sola vez). */

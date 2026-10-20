@@ -603,6 +603,7 @@ button:disabled { opacity: .6; cursor: default; }
 .tabs-linea .tab.activa { background: rgba(255,255,255,.04); color: #fff; border-bottom-color: #fff; }
 .tabs-linea .tab:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }
 @media print { .tabs-linea { display: none !important; } }
+.sub-iva { display: block; font-size: 10.5px; color: #7a7e83; font-weight: 400; margin-top: 2px; }
 /*__CSS_FIN__*/
 </style>
 </head>
@@ -1065,15 +1066,19 @@ button:disabled { opacity: .6; cursor: default; }
             m = text.match(/(\d{3,5})\s*-\s*([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ\s.,]{5,60})/);
             if (m) { res.ident.cliente = clean(m[2]); }
         }
-        m = text.match(/(?:Expediente|Ref(?:erencia)?|Oferta)\s*:?\s*([A-Z0-9][A-Z0-9_./-]{2,30})/i);
+        m = text.match(/\b(?:Expediente|Ref(?:erencia)?|Oferta)\b\s*:?\s*([A-Z0-9][A-Z0-9_./-]{2,30})/i);
         if (m) { res.ident.expediente = clean(m[1]); }
         if (!res.ident.expediente) {
             m = text.match(/\b(\d{4,6}\.\d{2})\b/);
             if (m) { res.ident.expediente = m[1]; }
         }
-        m = text.match(/(?:Proyecto|Obra|Denominaci[oó]n)\s*:?\s*\n?\s*([^\n]{5,120})/i);
+        m = text.match(/\b(?:Proyecto|Obra|Denominaci[oó]n)\b\s*:?\s*\n?\s*([^\n]{5,120})/i);
         if (!m) { m = text.match(/\b(\d{4,6}\.\d{2}\s*-\s*[^\n]{5,100})/); }
         if (m) { res.ident.proyecto = clean(m[1]); }
+        if (res.ident.proyecto && !res.ident.expediente) {
+            var mpx = res.ident.proyecto.match(/^(\d{4,6}(?:\.\d{2})?)\s*-/);
+            if (mpx) { res.ident.expediente = mpx[1]; }
+        }
         m = text.match(/(?:Fecha(?:\s+de\s+emisi[oó]n)?|Emisi[oó]n|Fecha\s+Impresi[oó]n)\s*:?\s*(\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})/i);
         if (!m) { m = text.match(/\b(\d{2}\/\d{2}\/\d{2,4})\b/); }
         if (m) { res.ident.fecha = m[1]; }
@@ -1147,13 +1152,23 @@ button:disabled { opacity: .6; cursor: default; }
         // ---- capítulos y subcapítulos
         var ignorar = /^(resumen\s+de(l)?\s+presupuesto|capitulo\s+resumen|fecha\s+impresion|pagina\s+\d)/;
         var encontrados = [], vistos = {};
+        /* Si el documento trae el cuadro «CAPITULO RESUMEN TOTAL %», los capítulos se leen SOLO de ahí
+           (así no se confunden con las líneas de mediciones, que también empiezan por un número). */
+        var iniResumen = -1;
+        for (var lr = 0; lr < lines.length; lr++) {
+            var tr = typeof lines[lr] === 'string' ? lines[lr] : analyseRow(lines[lr]).text;
+            if (tr && /^capitulo\s+resumen/.test(norm(tr))) { iniResumen = lr; break; }
+        }
+        var reViejo = /^(\d{2}(?:\.\d+)*)\s+(.+?)\s+(-?[0-9][0-9.,]*)\s*€?(?:\s+([0-9]+(?:[.,][0-9]+)?)\s*%?)?\s*$/;
+        var reNuevo = /^([A-Z]{2,5}|\d{2,12}(?:\.\d+)*)\s+(.+?)\s+(-?[0-9][0-9.,]*)\s*€?(?:\s+(-?[0-9]+(?:[.,][0-9]+)?)\s*%?)?\s*$/;
         for (var l = 0; l < lines.length; l++) {
+            if (iniResumen >= 0 && l < iniResumen) { continue; }
             var line = typeof lines[l] === 'string' ? lines[l] : analyseRow(lines[l]).text;
             if (!line) { continue; }
             var nl = norm(line);
             if (ignorar.test(nl)) { continue; }
             if (/^(total|subtotal|suma y sigue|base imponible|iva)\b/.test(nl) && !/^\d{2}\b/.test(nl)) { continue; }
-            var mm = line.match(/^(\d{2}(?:\.\d+)*)\s+(.+?)\s+(-?[0-9][0-9.,]*)\s*€?(?:\s+([0-9]+(?:[.,][0-9]+)?)\s*%?)?\s*$/);
+            var mm = line.match(iniResumen >= 0 ? reNuevo : reViejo);
             if (!mm) { continue; }
             // Los importes de estos resumenes usan coma decimal ("30.790,609").
             var imp = numDec(mm[2 + 1]);
@@ -1169,7 +1184,7 @@ button:disabled { opacity: .6; cursor: default; }
                 descripcion: clean(mm[2]),
                 importeSinIva: imp,
                 pesoPresupuesto: peso,
-                nivel: mm[1].split('.').length,
+                nivel: (/\./.test(mm[1]) ? mm[1].split('.').length : ((/^\d+$/.test(mm[1]) && mm[1].length > 3) ? 1 + Math.ceil((mm[1].length - 3) / 2) : 1)),
                 textoFuente: line
             };
             encontrados.push(item);
@@ -1236,7 +1251,7 @@ button:disabled { opacity: .6; cursor: default; }
             var lc = ltxt.match(reCert);
             if (lc) { res.ident.certificacion = lc[1]; break; }
         }
-        m = text.match(/(?:Presupuesto)\s*:?\s*([0-9]{3,6}[.,][0-9]{1,2})/i);
+        m = text.match(/(?:Presupuesto)\s*:?\s*([0-9]{3,6}(?:[.,][0-9]{1,2})?)/i);
         if (m) { res.ident.presupuesto = m[1]; }
         m = text.match(/(?:Fecha)\s*:?\s*(\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4})/i);
         if (m) { res.ident.fecha = m[1]; }
@@ -2384,39 +2399,75 @@ button:disabled { opacity: .6; cursor: default; }
 
     /* ------------------------------------------------------------ pestañas */
 
+    function ivaDe(D) {
+        var p = (D.presupuesto && D.presupuesto.totales) || {}, c = (D.certificacion && D.certificacion.totales) || {}, f = (D.factura && D.factura.totales) || {};
+        var cand = [p.ivaPct, c.ivaPct, f.ivaPct];
+        for (var i = 0; i < cand.length; i++) { if (cand[i] !== null && cand[i] !== undefined && !isNaN(cand[i])) { return cand[i]; } }
+        return null;
+    }
+
     function kpisCabecera(D) {
         var p = D.presupuesto || {}, c = D.certificacion || {}, s = D.seguimiento || {}, f = D.factura || {};
+        var ok = function (v) { return v !== null && v !== undefined && !isNaN(v); };
         var pem = p.totales ? p.totales.pem : null;
         var cert = c.totales ? c.totales.origen : null;
+        var iva = ivaDe(D);
+        var fac = iva === null ? 1 : 1 + iva / 100;
+        var pemIva = (p.totales && ok(p.totales.total)) ? p.totales.total : ((ok(pem) && iva !== null) ? pem * fac : null);
+        var certIva = (ok(cert) && iva !== null) ? cert * fac : null;
+        var kv = function (id) { var o = s.kpis && s.kpis[id]; return (o && ok(o.valor)) ? o.valor : null; };
+        var rv = function (key, sin) {
+            var r = s.resumen && s.resumen[key];
+            if (r && ok(r.total)) { return r.total; }
+            return (ok(sin) && iva !== null) ? sin * fac : null;
+        };
+        var pendCert = kv('pendienteCertificar'), pendFact = kv('pendienteFacturar');
         return {
-            pem: pem, cert: cert,
+            pem: pem, cert: cert, iva: iva,
+            pemIva: pemIva, certIva: certIva,
             pctCert: (pem && cert !== null) ? (cert / pem) * 100 : null,
             certTotal: c.totales ? c.totales.total : null,
-            saldo: s.kpis && s.kpis.totalSaldoFavorEnue ? s.kpis.totalSaldoFavorEnue.valor : null,
-            pendCert: s.kpis && s.kpis.pendienteCertificar ? s.kpis.pendienteCertificar.valor : null,
-            pendFact: s.kpis && s.kpis.pendienteFacturar ? s.kpis.pendienteFacturar.valor : null,
+            saldo: kv('totalSaldoFavorEnue'),
+            pendCert: pendCert, pendFact: pendFact,
+            pendCertIva: rv('pendienteCertificar', pendCert),
+            pendFactIva: rv('pendienteFacturar', pendFact),
             facturaTotal: f.totales ? f.totales.total : null
         };
+    }
+
+    function columnasCapitulo(x) {
+        var okN = function (v) { return v !== null && v !== undefined && !isNaN(v); };
+        var pos = (x.cOrigen !== undefined || x.cAnterior !== undefined || x.cActual !== undefined);
+        var o = okN(x.origen) ? x.origen : (okN(x.cOrigen) ? x.cOrigen : (okN(x.actual) ? x.actual : null));
+        var a = pos ? (okN(x.cAnterior) ? x.cAnterior : null) : ((x.columnas3 && okN(x.anterior)) ? x.anterior : null);
+        var m = okN(x.mes) ? x.mes : (okN(x.cActual) ? x.cActual : ((!pos && okN(x.actual)) ? x.actual : null));
+        return { origen: o, anterior: a, actual: m };
     }
 
     function capitulosUnificados(D) {
         var pres = (D.presupuesto && D.presupuesto.capitulos) || [];
         var cert = (D.certificacion && D.certificacion.capitulos) || [];
+        var iva = ivaDe(D), fac = iva === null ? null : 1 + iva / 100;
+        var aOrigen = function (c) { return (c.origen !== undefined && c.origen !== null && !isNaN(c.origen)) ? c.origen : c.actual; };
+        var conI = function (v) { return (v === null || v === undefined || isNaN(v) || fac === null) ? null : v * fac; };
         var out = [], vistos = {};
         pres.forEach(function (p) {
             var c = null;
             for (var i = 0; i < cert.length; i++) { if (cert[i].codigo === p.codigo) { c = cert[i]; break; } }
-            var certif = c ? c.actual : null;
+            var certif = c ? aOrigen(c) : null;
+            var kc = c ? columnasCapitulo(c) : { anterior: null, actual: null };
             out.push({
-                codigo: p.codigo, descripcion: p.descripcion, presupuesto: p.importeSinIva,
-                peso: p.pesoPresupuesto, certificado: certif,
-                pct: (certif !== null && p.importeSinIva) ? (certif / p.importeSinIva) * 100 : null
+                codigo: p.codigo, descripcion: p.descripcion, presupuesto: p.importeSinIva, presupuestoIva: conI(p.importeSinIva),
+                peso: p.pesoPresupuesto, certificado: certif, certificadoIva: conI(certif), anterior: kc.anterior, anteriorIva: conI(kc.anterior), actual: kc.actual, actualIva: conI(kc.actual),
+                pct: (certif !== null && certif !== undefined && p.importeSinIva) ? (certif / p.importeSinIva) * 100 : null
             });
             vistos[p.codigo] = 1;
         });
         cert.forEach(function (c) {
-            if (!vistos[c.codigo] && c.actual) {
-                out.push({ codigo: c.codigo, descripcion: c.descripcion, presupuesto: null, peso: null, certificado: c.actual, pct: null });
+            var v = aOrigen(c);
+            if (!vistos[c.codigo] && v) {
+                var kx = columnasCapitulo(c);
+                out.push({ codigo: c.codigo, descripcion: c.descripcion, presupuesto: null, presupuestoIva: null, peso: null, certificado: v, certificadoIva: conI(v), anterior: kx.anterior, anteriorIva: conI(kx.anterior), actual: kx.actual, actualIva: conI(kx.actual), pct: null });
             }
         });
         return out;
@@ -2553,13 +2604,17 @@ button:disabled { opacity: .6; cursor: default; }
 
     function tabResumen(D) {
         var k = kpisCabecera(D);
+        var subIva = function (conI, sin) {
+            if (conI === null || conI === undefined) { return 'sin IVA'; }
+            return 'IVA incl.' + ((sin !== null && sin !== undefined) ? ' · sin IVA: ' + fmtMoney(sin) : '');
+        };
         var html = '<div class="kpis">' +
-            kpi('Certificado acumulado', fmtPct(k.pctCert), 'sobre ' + fmtMoney(k.pem), 'k-cyan') +
-            kpi('Total certificado', fmtMoney(k.cert), k.certTotal ? 'con IVA: ' + fmtMoney(k.certTotal) : null) +
-            kpiPar('Pendiente de certificar', fmtMoney(k.pendCert), 'según ficha de seguimiento', 'Pendiente de facturar', fmtMoney(k.pendFact), 'según ficha de seguimiento') +
+            kpi('Certificado acumulado', fmtPct(k.pctCert), 'sobre ' + (k.pemIva !== null ? fmtMoney(k.pemIva) + ' (IVA incl.)' : fmtMoney(k.pem) + ' (sin IVA)'), 'k-cyan') +
+            kpi('Total certificado a origen', fmtMoney(k.certIva !== null ? k.certIva : k.cert), subIva(k.certIva, k.cert)) +
+            kpiPar('Pendiente de certificar', fmtMoney(k.pendCertIva !== null ? k.pendCertIva : k.pendCert), subIva(k.pendCertIva, k.pendCert), 'Pendiente de facturar', fmtMoney(k.pendFactIva !== null ? k.pendFactIva : k.pendFact), subIva(k.pendFactIva, k.pendFact)) +
             '' +
             kpi('Saldo pendiente de pago', fmtMoney(k.saldo), 'facturado − cobrado', 'k-saldo') +
-            kpi('Factura de la quincena', fmtMoney(k.facturaTotal),
+            kpi('Factura de la quincena (IVA incl.)', fmtMoney(k.facturaTotal),
                 D.factura && D.factura.ident && D.factura.ident.numero ? 'nº ' + D.factura.ident.numero : null) +
             '</div>';
 
@@ -2568,16 +2623,24 @@ button:disabled { opacity: .6; cursor: default; }
 
         var caps = capitulosUnificados(D);
         if (caps.length) {
-            html += '<div class="bloque">' + filaCabecera('Avance de certificación vs presupuesto', 'Comparativa capítulo a capítulo: presupuesto adjudicado frente a lo certificado.', caps.length + ' capítulos') +
-                '<div class="datos-ident"><span>Presupuesto: <strong>' + fmtMoney(k.pem) + '</strong></span>' +
-                '<span>Certificado: <strong>' + fmtMoney(k.cert) + '</strong></span>' +
+            var useIva = k.pemIva !== null && k.certIva !== null;
+            var pI = useIva ? k.pemIva : k.pem, cI = useIva ? k.certIva : k.cert;
+            var etIva = useIva ? ' (IVA incl.)' : '';
+            var dosImp = function (sin, con) {
+                if (sin === null || sin === undefined || isNaN(sin)) { return '—'; }
+                if (!useIva || con === null || con === undefined) { return fmtMoney(sin); }
+                return fmtMoney(con) + '<small class="sub-iva">sin IVA ' + fmtMoney(sin) + '</small>';
+            };
+            html += '<div class="bloque">' + filaCabecera('Avance de certificación vs presupuesto', 'Comparativa capítulo a capítulo: presupuesto adjudicado frente a lo certificado a origen' + (useIva ? ' (importes con IVA incluido).' : ' (importes sin IVA).'), caps.length + ' capítulos') +
+                '<div class="datos-ident"><span>Presupuesto' + etIva + ': <strong>' + fmtMoney(pI) + '</strong></span>' +
+                '<span>Certificado a origen' + etIva + ': <strong>' + fmtMoney(cI) + '</strong></span>' +
                 '<span>Avance: <strong>' + fmtPct(k.pctCert) + '</strong></span>' +
-                '<span>Pendiente: <strong>' + (k.pem !== null && k.cert !== null ? fmtMoney(k.pem - k.cert) : '—') + '</strong></span></div>' +
-                tabla(['Código', 'Capítulo', 'Presupuesto', 'Certificado', 'Avance'],
+                '<span>Pendiente' + etIva + ': <strong>' + (pI !== null && cI !== null ? fmtMoney(pI - cI) : '—') + '</strong></span></div>' +
+                tabla(['Código', 'Capítulo', 'Presupuesto' + etIva, 'Origen' + etIva, 'Anterior' + etIva, 'Actual' + etIva, 'Avance'],
                     caps.map(function (c) {
-                        return ['<span class="mono">' + esc(c.codigo) + '</span>', esc(c.descripcion), fmtMoney(c.presupuesto), fmtMoney(c.certificado),
+                        return ['<span class="mono">' + esc(c.codigo) + '</span>', esc(c.descripcion), dosImp(c.presupuesto, c.presupuestoIva), dosImp(c.certificado, c.certificadoIva), (c.anterior ? dosImp(c.anterior, c.anteriorIva) : '—'), (c.actual ? dosImp(c.actual, c.actualIva) : '—'),
                             c.pct === null ? '—' : barra(c.pct) + '<span class="pct">' + fmtPct(c.pct) + '</span>'];
-                    }), ['', '', 'num', 'num', 'avance']) + '</div>';
+                    }), ['', '', 'num', 'num', 'num', 'num', 'avance']) + '</div>';
         } else {
             html += '<div class="bloque">' + sinDatos('Sin capítulos para comparar') + '</div>';
         }
@@ -2622,18 +2685,43 @@ button:disabled { opacity: .6; cursor: default; }
     function tabCertificacionReal(D) {
         var c = D.certificacion;
         if (!c) { return sinDatos('Certificación no disponible', 'Carga el PDF 1 (certificación actual).'); }
+        var cT = c.colTotales || {};
+        var ctO = (cT.origen !== undefined && cT.origen !== null) ? cT.origen : c.totales.origen;
+        var ctA = (cT.actual !== undefined && cT.actual !== null) ? cT.actual : c.totales.actual;
         var html = '<div class="kpis">' +
-            kpi('Total a origen', fmtMoney(c.totales.origen), null, 'k-cyan') +
-            kpi('Líquido de la quincena', fmtMoney(c.totales.actual)) +
+            kpi('Total a origen', fmtMoney(ctO), null, 'k-cyan') +
+            kpi('Líquido de la quincena', fmtMoney(ctA)) +
             kpi('Cuota de IVA', fmtMoney(c.totales.iva), c.totales.ivaPct ? fmtNum(c.totales.ivaPct, 2) + ' %' : null) +
             kpi('Total con IVA', fmtMoney(c.totales.total), null, 'k-green') +
             '</div>';
         if ((c.capitulos || []).length) {
-            html += '<div class="bloque">' + filaCabecera('Capítulos certificados', 'Importes certificados por capítulo en esta certificación.', c.capitulos.length + ' capítulos') +
-                tabla(['Código', 'Capítulo', 'Certificado'],
-                    c.capitulos.map(function (x) {
-                        return ['<span class="mono">' + esc(x.codigo) + '</span>', esc(x.descripcion), x.actual === null ? '—' : fmtMoney(x.actual)];
-                    }), ['', '', 'num']) + '</div>';
+            var okN = function (v) { return v !== null && v !== undefined && !isNaN(v); };
+            var f2 = function (v) { return (!okN(v) || v === 0) ? '—' : fmtMoney(v); };
+            var filasC = c.capitulos.map(function (x) {
+                var k = columnasCapitulo(x);
+                return { x: x, o: k.origen, a: k.anterior, m: k.actual };
+            });
+            var sumaC = function (campo) {
+                var s = 0, n = 0;
+                filasC.forEach(function (r) { if (okN(r[campo])) { s += r[campo]; n++; } });
+                return n ? s : null;
+            };
+            var tOr = okN(cT.origen) ? cT.origen : sumaC('o');
+            var tAn = okN(cT.anterior) ? cT.anterior : sumaC('a');
+            var tAc = okN(cT.actual) ? cT.actual : sumaC('m');
+            var ivaC = (c.totales && okN(c.totales.ivaPct)) ? c.totales.ivaPct : null;
+            var conIvaC = function (v) { return (ivaC === null || !okN(v)) ? '—' : fmtMoney(v * (1 + ivaC / 100)); };
+            var cuerpoF = filasC.map(function (r) {
+                return ['<span class="mono">' + esc(r.x.codigo) + '</span>', esc(r.x.descripcion) + (r.x.cCalc ? ' <small>(calculado por diferencia con los totales)</small>' : ''), f2(r.o), f2(r.a), f2(r.m)];
+            });
+            cuerpoF.push(['', '<strong>Total</strong>', '<strong>' + f2(tOr) + '</strong>', '<strong>' + f2(tAn) + '</strong>', '<strong>' + f2(tAc) + '</strong>']);
+            if (ivaC !== null) {
+                cuerpoF.push(['', '<strong>Total con IVA (' + fmtNum(ivaC, ivaC % 1 === 0 ? 0 : 2) + ' %)</strong>', '<strong>' + conIvaC(tOr) + '</strong>', '<strong>' + conIvaC(tAn) + '</strong>', '<strong>' + conIvaC(tAc) + '</strong>']);
+            }
+            var difO = okN(cT.origen) && sumaC('o') !== null ? Math.abs(sumaC('o') - cT.origen) : 0;
+            html += '<div class="bloque">' + filaCabecera('Capítulos certificados', 'Origen, anterior y actual de cada capítulo, tal como figuran en la certificación (importes sin IVA; el total con IVA va en la última fila).', c.capitulos.length + ' capítulos') +
+                tabla(['Código', 'Capítulo', 'Origen', 'Anterior', 'Actual'], cuerpoF, ['', '', 'num', 'num', 'num']) +
+                (difO > 0.05 ? '<p class="formula">Aviso: la suma de los capítulos difiere del total a origen del PDF en ' + fmtMoney(difO) + '.</p>' : '') + '</div>';
         }
         if ((c.partidas || []).length) {
             html += '<details class="plegable bloque"><summary>Ver ' + c.partidas.length + ' partidas y subcapítulos</summary>' +
@@ -2698,6 +2786,14 @@ button:disabled { opacity: .6; cursor: default; }
             if (r && okN(r.total)) { return '<span>Con IVA:</span><strong>' + fmtMoney(r.total) + '</strong>'; }
             return pieIva(v);
         };
+        var totIva = function (key, v) { var r = s.resumen && s.resumen[key]; if (r && okN(r.total)) { return r.total; } return conIva(v); };
+        var sinPie = function (v) { return (v === null || v === undefined) ? '' : '<span>Sin IVA:</span><strong>' + fmtMoney(v) + '</strong>'; };
+        var vi = function (v) { var x = (v === null || v === undefined) ? null : conIva(v); return x === null ? v : x; };
+        var presuIva = totIva('presupuesto', presu);
+        var ejecIva = conIva(ejec);
+        var emitIva = totIva('facturasEmitidas', emit);
+        var pendCertIva = totIva('pendienteCertificar', pendCert);
+        var pendFactIva = totIva('pendienteFacturar', pendFact);
         var capsTodos = c.capitulos || [];
         var nuevoFmt = capsTodos.some(function (x) { return x.origen !== undefined || x.mes !== undefined; });
         var caps = capsTodos.map(function (x) {
@@ -2731,11 +2827,11 @@ button:disabled { opacity: .6; cursor: default; }
         h += '<section class="se-sec" id="se-resumen">' +
             cab('Bloque 01', 'Resumen económico general', 'Cifras leídas de la ficha de seguimiento y de la certificación cargadas') +
             '<div class="se-grid">' +
-            card('Presupuesto obra aprox.', mon(presu), 'se-c-acc', pieFicha('presupuesto', presu)) +
-            card('Obra ejecutada a origen', mon(ejec), 'se-c-ok',
-                '<span>' + (det ? 'Según ficha de seguimiento' : 'Según certificación a origen') + '</span>' + (pctAv !== null ? '<strong class="se-chip-ok">~' + fmtNum(pctAv, 2) + ' %</strong>' : '')) +
-            card('Facturación emitida', mon(emit), 'se-c-pri', pagos !== null ? '<span>Pagos recibidos:</span><strong>' + fmtMoney(pagos) + '</strong>' : '') +
-            cardPar('Pendiente de certificar', mon(pendCert), pieFicha('pendienteCertificar', pendCert), 'Pendiente de facturar', mon(pendFact), pieFicha('pendienteFacturar', pendFact)) +
+            card('Presupuesto obra aprox. (IVA incl.)', mon(presuIva !== null ? presuIva : presu), 'se-c-acc', presuIva !== null ? sinPie(presu) : '<span>Sin IVA</span>') +
+            card('Obra ejecutada a origen (IVA incl.)', mon(ejecIva !== null ? ejecIva : ejec), 'se-c-ok',
+                '<span>' + (ejecIva !== null && ejec !== null ? 'Sin IVA: ' + fmtMoney(ejec) : (det ? 'Según ficha de seguimiento' : 'Según certificación a origen')) + '</span>' + (pctAv !== null ? '<strong class="se-chip-ok">~' + fmtNum(pctAv, 2) + ' %</strong>' : '')) +
+            card('Facturación emitida (IVA incl.)', mon(emitIva !== null ? emitIva : emit), 'se-c-pri', pagos !== null ? '<span>Pagos recibidos:</span><strong>' + fmtMoney(pagos) + '</strong>' : '') +
+            cardPar('Pendiente de certificar (IVA incl.)', mon(pendCertIva !== null ? pendCertIva : pendCert), sinPie(pendCert), 'Pendiente de facturar (IVA incl.)', mon(pendFactIva !== null ? pendFactIva : pendFact), sinPie(pendFact)) +
             '' +
             (saldo !== null ? '<div class="se-card se-c-red"><div class="se-card-in"><span class="se-card-t">Saldo actual pendiente de pago</span>' +
                 '<div class="se-card-v">' + esc(fmtMoney(saldo)) + '</div>' +
@@ -2743,13 +2839,13 @@ button:disabled { opacity: .6; cursor: default; }
             '</div>';
         if (pctAv !== null) {
             h += '<div class="se-panel"><div class="se-prog-h"><div><h3>Progreso global de ejecución presupuestaria</h3>' +
-                '<p>Obra ejecutada frente al presupuesto estimado de la reforma</p></div>' +
+                '<p>Obra ejecutada frente al presupuesto estimado de la reforma' + (ivaP !== null ? ' · importes con IVA incluido' : '') + '</p></div>' +
                 '<div class="se-prog-p"><strong>~' + fmtNum(pctAv, 2) + ' %</strong><span>calculado aprox.</span></div></div>' +
                 '<div class="se-track"><div class="se-fill" style="width:' + Math.max(0, Math.min(100, pctAv)) + '%"></div></div>' +
                 '<div class="se-mini">' +
-                '<div><span>Ejecutado a origen</span><strong>' + fmtMoney(ejec) + '</strong></div>' +
-                '<div><span>Presupuesto aprox.</span><strong>' + fmtMoney(presu) + '</strong></div>' +
-                '<div><span>Resta por ejecutar</span><strong class="amb">' + (pendCert !== null ? fmtMoney(pendCert) : fmtMoney(presu - ejec)) + '</strong></div>' +
+                '<div><span>Ejecutado a origen' + (ejecIva !== null ? ' (IVA incl.)' : '') + '</span><strong>' + fmtMoney(ejecIva !== null ? ejecIva : ejec) + '</strong></div>' +
+                '<div><span>Presupuesto aprox.' + (presuIva !== null ? ' (IVA incl.)' : '') + '</span><strong>' + fmtMoney(presuIva !== null ? presuIva : presu) + '</strong></div>' +
+                '<div><span>Resta por ejecutar' + (pendCertIva !== null ? ' (IVA incl.)' : '') + '</span><strong class="amb">' + (pendCertIva !== null ? fmtMoney(pendCertIva) : (pendCert !== null ? fmtMoney(pendCert) : fmtMoney(presu - ejec))) + '</strong></div>' +
                 '</div></div>';
         }
         h += '</section>';
@@ -2760,12 +2856,12 @@ button:disabled { opacity: .6; cursor: default; }
             cab('Lectura rápida', 'Puntos clave del estado económico actual', fechaAct ? 'Situación a ' + fechaAct : '') +
             '<div class="se-3">' +
             '<div class="se-q"><span class="se-q-t">Hito 1 · Obra ejecutada</span><p>' +
-                (ejec !== null ? 'La obra certificada alcanza <b class="ok">' + esc(fmtMoney(ejec)) + '</b>.' : 'No se ha podido leer la obra certificada.') + '</p><small>' + esc(capsTxt) + '</small></div>' +
+                (ejec !== null ? 'La obra certificada alcanza <b class="ok">' + esc(fmtMoney(ejecIva !== null ? ejecIva : ejec)) + '</b>' + (ejecIva !== null ? ' (IVA incluido).' : '.') : 'No se ha podido leer la obra certificada.') + '</p><small>' + esc(capsTxt) + '</small></div>' +
             '<div class="se-q rojo"><span class="se-q-t">Hito 2 · Saldo pendiente</span><p>' +
                 (saldo !== null ? 'El saldo pendiente de pago es <b class="rj">' + esc(fmtMoney(saldo)) + '</b>' + (fi.numero ? ' (factura ' + esc(fi.numero) + ').' : '.') : 'No se ha podido leer el saldo.') + '</p>' +
                 '<small>Según la ficha de seguimiento económico.</small></div>' +
             '<div class="se-q"><span class="se-q-t">Hito 3 · Margen restante</span><p>' +
-                (pendCert !== null ? 'Queda pendiente de certificar <b class="pr">' + esc(fmtMoney(pendCert)) + '</b>' + (conIva(pendCert) !== null ? ' (con IVA: ' + esc(fmtMoney(conIva(pendCert))) + ').' : '.') : 'No se ha podido leer lo pendiente de certificar.') + '</p>' +
+                (pendCert !== null ? 'Queda pendiente de certificar <b class="pr">' + esc(fmtMoney(pendCertIva !== null ? pendCertIva : pendCert)) + '</b>' + (pendCertIva !== null ? ' (IVA incluido).' : '.') : 'No se ha podido leer lo pendiente de certificar.') + '</p>' +
                 '<small>Permite planificar las siguientes fases con visibilidad del presupuesto.</small></div>' +
             '</div>' +
             '<div class="se-note">Criterio de transparencia: las cifras se leen de los documentos cargados sin recalcularlas; solo los porcentajes y los importes con IVA se calculan a partir de ellas.</div>' +
@@ -2796,24 +2892,24 @@ button:disabled { opacity: .6; cursor: default; }
             var maxv = capsOri.reduce(function (a, x) { return Math.max(a, x.origen); }, 0) || 1;
             var top = capsOri.slice().sort(function (x, y) { return y.origen - x.origen; }).slice(0, 3);
             h += '<section class="se-sec" id="se-cert">' +
-                cab('Bloque 03', (usaFicha ? 'Detalle de obra ejecutada por capítulos' : 'Certificación a origen por capítulos'), (usaFicha ? 'Importes de la ficha de seguimiento económico (columnas Mes y Origen)' : 'Importes certificados por capítulo técnico'),
-                    '<div class="se-tot"><span>' + (usaFicha ? 'Total obra ejecutada a origen' : 'Total certificación mostrada') + '</span><strong>' + esc(fmtMoney(totOriF)) + '</strong></div>') +
+                cab('Bloque 03', (usaFicha ? 'Detalle de obra ejecutada por capítulos' : 'Certificación a origen por capítulos'), (usaFicha ? 'Importes de la ficha de seguimiento económico (columnas Mes y Origen)' : 'Importes certificados por capítulo técnico') + (ivaP !== null ? ', con IVA incluido' : ''),
+                    '<div class="se-tot"><span>' + (usaFicha ? 'Total obra ejecutada a origen' : 'Total certificación mostrada') + '</span><strong>' + esc(fmtMoney(vi(totOriF))) + '</strong></div>') +
                 '<div class="se-2"><div class="se-panel se-flush"><div class="se-ph"><span>Capítulos de obra</span><small>' + capsMes.length + ' capítulos' + (usaFicha ? ' · columna Mes' : '') + '</small></div>' +
                 (capsMes.length ? '<div class="se-lista">' + capsMes.map(function (x, i) {
                     var pc = totMesF ? (x.mes / totMesF) * 100 : null;
                     return '<div class="se-row"><div class="se-row-l"><span class="se-num">' + ('0' + (i + 1)).slice(-2) + '</span>' +
                         '<div><b>' + esc(x.descripcion || '') + '</b><small>' + esc(x.codigo || '') + '</small></div></div>' +
-                        '<div class="se-row-r"><b class="se-mono">' + esc(fmtMoney(x.mes)) + '</b>' +
+                        '<div class="se-row-r"><b class="se-mono">' + esc(fmtMoney(vi(x.mes))) + '</b>' +
                         (pc !== null ? '<span class="se-chip-ok">' + esc(fmtNum(pc, 1)) + ' %</span>' : '') + '</div></div>';
                 }).join('') + '</div>' : '<div class="se-note">Sin importes en la columna Mes de esta certificación.</div>') +
-                '<div class="se-pie"><span>Total certificado en el mes</span><b class="se-mono">' + esc(fmtMoney(totMesF)) + '</b></div></div>' +
+                '<div class="se-pie"><span>Total certificado en el mes</span><b class="se-mono">' + esc(fmtMoney(vi(totMesF))) + '</b></div></div>' +
                 '<div class="se-panel"><div class="se-ph2"><h3>Distribución de costes acumulados</h3><small>' + (usaFicha ? 'Columna Origen' : 'Pasa el ratón para resaltar') + '</small></div>' +
                 '<div class="se-bars">' + capsOri.map(function (x) {
-                    return '<div class="se-bar"><div class="se-bar-t"><span>' + esc(x.descripcion || '') + '</span><b class="se-mono">' + esc(fmtMoney(x.origen)) + '</b></div>' +
+                    return '<div class="se-bar"><div class="se-bar-t"><span>' + esc(x.descripcion || '') + '</span><b class="se-mono">' + esc(fmtMoney(vi(x.origen))) + '</b></div>' +
                         '<div class="se-bar-k"><div class="se-bar-f" style="width:' + Math.max(4, (x.origen / maxv) * 100) + '%"></div></div></div>';
                 }).join('') + '</div>' +
                 (top.length ? '<div class="se-note">Capítulo destacado: ' + top.map(function (x, i) {
-                    return (i === 0 ? 'el de mayor repercusión es <b>' : (i === 1 ? ', seguido de <b>' : ' y <b>')) + esc(x.descripcion || '') + '</b> (' + esc(fmtMoney(x.origen)) + ')';
+                    return (i === 0 ? 'el de mayor repercusión es <b>' : (i === 1 ? ', seguido de <b>' : ' y <b>')) + esc(x.descripcion || '') + '</b> (' + esc(fmtMoney(vi(x.origen))) + ')';
                 }).join('') + '.</div>' : '') + '</div></div></section>';
         }
 
@@ -3858,7 +3954,7 @@ button:disabled { opacity: .6; cursor: default; }
         var ETQ = [
             ['base', ['base', 'baseimponible']], ['ivaPct', ['%iva']], ['iva', ['cuotaiva']],
             ['pctRE', ['%re']], ['cuotaRE', ['cuotare']], ['suplidos', ['cuotasuplidos', 'suplidos']],
-            ['irpf', ['irpf']], ['pctIRPF', ['%irpf']], ['pctRT', ['%rt']],
+            ['irpf', ['irpf']], ['pctIRPF', ['%irpf']], ['baseRT', ['basert']], ['pctRT', ['%rt']],
             ['retGat', ['retgat']], ['total', ['totalfactura']]
         ];
         var norm = function (t) { return String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '').replace(/\./g, ''); };
@@ -3898,7 +3994,7 @@ button:disabled { opacity: .6; cursor: default; }
                 });
                 if (!numericos.length) { continue; }
                 var rowY = Math.max.apply(null, numericos.map(function (c) { return c.y; }));
-                var banda = numericos.filter(function (c) { return Math.abs(c.y - rowY) <= 10; });
+                var banda = numericos.filter(function (c) { return Math.abs(c.y - rowY) <= 16; });
                 var valores = {}, dist = {};
                 banda.forEach(function (c) {
                     var ic = c.x + (c.w || 0) / 2, ir = c.x + (c.w || 0), mejor = null, dm = 1e9;
@@ -4038,6 +4134,57 @@ button:disabled { opacity: .6; cursor: default; }
             '<tr class="tot"><td>Totales</td><td></td><td></td><td>' + fm(sb) + '</td><td>' + fm(si) + '</td><td>' + fm(st) + '</td><td>' + fm(sc) + '</td><td></td></tr></tbody></table></div>';
     }
 
+    function aplicarColumnasCert(res, crudos) {
+        if (!res || !crudos || !crudos.length) { return; }
+        var RE = /^-?\d{1,3}(?:\.\d{3})*,\d{2,3}$/;
+        var limpio = function (s) { return String(s).replace(/[€\s\u00a0]/g, ''); };
+        var aNum = function (s) { return parseFloat(limpio(s).replace(/\./g, '').replace(',', '.')); };
+        var colDe = function (der) { return der < 427 ? 'origen' : (der < 520 ? 'anterior' : 'actual'); };
+        var importesDeFila = function (ref) {
+            var r = { origen: null, anterior: null, actual: null }, n = 0, i;
+            for (i = 0; i < crudos.length; i++) {
+                var it = crudos[i];
+                if (it === ref || it.p !== ref.p || Math.abs(it.y - ref.y) > 3) { continue; }
+                var t = limpio(it.s);
+                if (!RE.test(t)) { continue; }
+                var der = it.x + (it.w || 0);
+                if (der < 300) { continue; }
+                var c = colDe(der);
+                if (r[c] === null) { r[c] = aNum(t); n++; }
+            }
+            return n ? r : null;
+        };
+        var porCod = {}, tot = null, i;
+        for (i = 0; i < crudos.length; i++) {
+            var it0 = crudos[i], s = String(it0.s || '');
+            var m = s.match(/^\s*Total\s+Cap[ií]tulo\s+(\S+)/i);
+            if (m) { porCod[m[1]] = importesDeFila(it0) || { origen: null, anterior: null, actual: null }; continue; }
+            if (/^\s*Totales\s*$/.test(s)) { var rr = importesDeFila(it0); if (rr) { tot = rr; } }
+        }
+        var caps = res.capitulos || [], hallados = 0, k;
+        for (k = 0; k < caps.length; k++) {
+            var r = porCod[String(caps[k].codigo)];
+            if (r) { caps[k].cOrigen = r.origen; caps[k].cAnterior = r.anterior; caps[k].cActual = r.actual; hallados++; }
+        }
+        if (!hallados) { return; }
+        if (tot) { res.colTotales = { origen: tot.origen, anterior: tot.anterior, actual: tot.actual }; }
+        /* un único capítulo sin línea de total: se calcula por diferencia con los totales */
+        var sin = caps.filter(function (c) { return c.cOrigen === undefined && c.origen !== null && c.origen !== undefined; });
+        if (tot && sin.length === 1) {
+            var resto = function (campo, tcampo) {
+                if (tot[tcampo] === null || tot[tcampo] === undefined) { return null; }
+                var sm = 0;
+                caps.forEach(function (c) { if (c !== sin[0] && typeof c[campo] === 'number' && !isNaN(c[campo])) { sm += c[campo]; } });
+                var v = Math.round((tot[tcampo] - sm) * 1000) / 1000;
+                return Math.abs(v) < 0.0005 ? 0 : v;
+            };
+            sin[0].cOrigen = resto('cOrigen', 'origen');
+            sin[0].cAnterior = resto('cAnterior', 'anterior');
+            sin[0].cActual = resto('cActual', 'actual');
+            sin[0].cCalc = true;
+        }
+    }
+
     function aplicarDetalleFicha(res, crudos) {
         var o = leerDetalleFicha(crudos);
         res.avisos = res.avisos || [];
@@ -4115,6 +4262,7 @@ button:disabled { opacity: .6; cursor: default; }
             var res = parsearCon(zona.parser, soloTexto(lectura.lineas), { origen: 'PDF', numPaginas: lectura.numPaginas });
             res._lineas = soloTexto(lectura.lineas);
             if (zona.parser === 'seguimiento') { try { aplicarDetalleFicha(res, lectura.crudos); } catch (eDet) { (res.avisos = res.avisos || []).push('No se pudo leer la tabla Detalle obra ejecutada: ' + eDet.message); } }
+            if (zona.parser === 'certificacion') { try { aplicarColumnasCert(res, lectura.crudos); } catch (eCc) { (res.avisos = res.avisos || []).push('No se pudo leer el desglose por columnas de la certificación: ' + eCc.message); } }
             if (zona.parser === 'factura') { try { aplicarPieFactura(res, lectura.crudos); } catch (ePie) { (res.avisos = res.avisos || []).push('No se pudo leer el pie de la factura: ' + ePie.message); } }
             return res;
         }
@@ -4523,6 +4671,7 @@ button:disabled { opacity: .6; cursor: default; }
                         '<td>' + esc(cc && cc.descripcion) + '</td>' +
                         '<td class="num"><input type="text" class="val-input mini" data-zona="pdf1" data-lista="capitulos" data-idx="' + j + '" data-campo="mes" value="' + esc(cc && cc.mes !== null && cc.mes !== undefined ? cc.mes : '') + '" placeholder="—"></td>' +
                         '<td class="num"><input type="text" class="val-input mini" data-zona="pdf1" data-lista="capitulos" data-idx="' + j + '" data-campo="origen" value="' + esc(cc ? (cc.origen !== undefined ? (cc.origen !== null ? cc.origen : '') : (cc.actual !== null && cc.actual !== undefined ? cc.actual : '')) : '') + '" placeholder="—"></td>' +
+                        '<td class="num">' + ((cc && cc.cAnterior !== undefined && cc.cAnterior !== null) ? esc(String(cc.cAnterior).replace('.', ',')) : '—') + '</td>' +
                         '</tr>';
                 }
                 var cuerpoC = '<div class="val-grid-4">' +
@@ -4539,7 +4688,7 @@ button:disabled { opacity: .6; cursor: default; }
                     'Partidas: <strong>' + cpart.length + '</strong>' +
                     (cer._cuadre ? ' · Cuadre Origen + IVA = Total: <strong>' + esc(cer._cuadre) + '</strong>' : '') + '</div>' +
                     (filasC
-                        ? '<div class="val-tabla-scroll alto"><table class="val-tabla"><thead><tr><th>Código</th><th>Capítulo</th><th class="num">Mes</th><th class="num">Origen</th></tr></thead><tbody>' + filasC + '</tbody></table></div>'
+                        ? '<div class="val-tabla-scroll alto"><table class="val-tabla"><thead><tr><th>Código</th><th>Capítulo</th><th class="num">Mes</th><th class="num">Origen</th><th class="num">Anterior</th></tr></thead><tbody>' + filasC + '</tbody></table></div>'
                         : '<div class="val-aviso">No se han reconocido capítulos en la certificación. Los totales de arriba siguen siendo válidos.</div>');
                 partes.push(tarjetaCabecera('Certificación actual (PDF 1)', 'Totales y capítulos certificados en la quincena.', cuerpoC, cer, 'pdf1'));
             } catch (err) { partes.push(bloqueFallo('Certificación actual (PDF 1)', cer, err)); }

@@ -593,6 +593,15 @@ button:disabled { opacity: .6; cursor: default; }
 .plazo-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px 18px; }
 .plazo-fila { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; }
 .plazo-fila .val-input { max-width: 150px; }
+.cal-hoy { margin: 12px 0 0; font-size: 12.5px; color: #1a1a1a; }
+.cal-hitos { margin-top: 8px; overflow-x: auto; }
+.cal-hitos table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.cal-hitos th, .cal-hitos td { padding: 7px 8px; border-bottom: 1px solid #e3e5e8; text-align: left; white-space: nowrap; }
+.cal-hitos th { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: #5c6168; font-weight: 700; }
+.cal-hitos .c-rojo { color: #b42318; font-weight: 700; }
+.cal-hitos .c-ambar { color: #b45309; font-weight: 700; }
+.cal-hitos .c-verde { color: #1f6f3a; font-weight: 700; }
+.cal-hitos .c-gris { color: #8b9096; }
 .multi-drop { border: 2px dashed #8b9096; border-radius: 6px; padding: 18px 20px; background: #fafafa; margin: 0 0 16px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; transition: .15s; }
 .multi-drop.arrastrando { border-color: #1a1a1a; background: #eeeeee; }
 .multi-t { font-size: 15px; font-weight: 700; color: #1a1a1a; }
@@ -2550,7 +2559,7 @@ button:disabled { opacity: .6; cursor: default; }
         } else {
             txt = 'Fuera de plazo · ' + (-restan) + (restan === -1 ? ' día' : ' días') + ' de descuadre · límite ' + fechaLim; cls = 'b-rose'; tono = 'rojo'; usado = 100;
         }
-        return '<span class="plazo-bloque"><span class="plazo-t">Plazo de definición · ' + dias + ' días</span>' +
+        return '<span class="plazo-bloque"><span class="plazo-t">' + ((String(fase).match(/(\d+)/) || [])[1] ? 'Hito ' + String(fase).match(/(\d+)/)[1] + ' · ' : '') + 'Plazo de definición · ' + dias + ' días</span>' +
             barra(usado, cls) + '<span class="plazo-txt plazo-' + tono + '">' + txt + '</span></span>';
     }
 
@@ -2609,7 +2618,7 @@ button:disabled { opacity: .6; cursor: default; }
             var base = defs.length - noproc;
             var pct = base > 0 ? (eleg / base) * 100 : null;
             var lim = ini + dias * DIA;
-            filas.push({ fase: f.fase, dias: dias, restan: Math.round((lim - hoy) / DIA), lim: lim, pct: pct, hecha: pct !== null && pct >= 100 });
+            filas.push({ fase: f.fase, hito: (String(f.fase).match(/(\d+)/) || [])[1] || '', dias: dias, restan: Math.round((lim - hoy) / DIA), lim: lim, pct: pct, hecha: pct !== null && pct >= 100 });
         });
         if (!filas.length) { return ''; }
         var maxDias = Math.max.apply(null, filas.map(function (x) { return x.dias; }));
@@ -2628,7 +2637,7 @@ button:disabled { opacity: .6; cursor: default; }
                 w = 100; cls = 'rojo'; tono = 'rojo'; txt = 'Fuera de plazo · ' + (-x.restan) + (x.restan === -1 ? ' día' : ' días') + ' de descuadre';
             }
             return '<div class="pg-fila">' +
-                '<div class="pg-fase"><strong>' + esc(x.fase) + '</strong><span>' + x.dias + ' días · límite ' + fmtF(x.lim) + '</span></div>' +
+                '<div class="pg-fase"><strong>' + esc(x.fase) + '</strong><span>' + (x.hito ? 'Hito ' + x.hito + ' · ' : '') + x.dias + ' días · límite ' + fmtF(x.lim) + '</span></div>' +
                 '<div class="pg-pista"><div class="pg-barra ' + cls + '" style="width:' + w.toFixed(1) + '%"></div></div>' +
                 '<div class="pg-txt pg-' + tono + '">' + txt + '<small>' + (x.pct === null ? 'sin datos' : fmtPct(x.pct, 0) + ' definido') + '</small></div>' +
                 '</div>';
@@ -5020,13 +5029,13 @@ button:disabled { opacity: .6; cursor: default; }
                 var hsA = conA.plazosHitos || [];
                 if (!pf.firma && conA.fechaFirma) { pf.firma = conA.fechaFirma; }
                 if (!pf.dias) { pf.dias = {}; }
-                matP.fases.forEach(function (f, ix) { if (!pf.dias[f.fase] && hsA[ix]) { pf.dias[f.fase] = hsA[ix].dias; } });
+                matP.fases.forEach(function (f, ix) { var nF = numFase(f.fase, ix + 1); var hA = hsA[nF - 1]; if (!pf.dias[f.fase] && hA) { pf.dias[f.fase] = hA.dias; } });
                 pf.auto = true; state.plazosForm = pf;
             }
             if (conA && (pf.auto || conA.fechaFirma)) {
                 notaAuto = '<div class="val-nota"><strong>Rellenado desde el contrato:</strong> fecha de firma ' + esc(conA.fechaFirma ? conA.fechaFirma.split('-').reverse().join('/') : 'no detectada') +
                     (conA.fechaFirmaOrigen ? ' (leída del ' + esc(conA.fechaFirmaOrigen) + ')' : '') +
-                    ' y los plazos de cada hito, asignados por orden: hito 1 a la primera fase, hito 2 a la segunda, y así sucesivamente. Compruébalo y corrígelo si hace falta.</div>';
+                    ' y los plazos de cada hito, asignados por número: hito 1 a la Fase 1, hito 2 a la Fase 2, hito 3 a la Fase 3 y hito 4 a la Fase 4. Las fases sin hito (por ejemplo la Fase 5) quedan sin plazo. Compruébalo y corrígelo si hace falta.</div>';
             }
             var filasP = matP.fases.map(function (f) {
                 var tit = (f.titulo || '').replace(/^FASE\s*\d+\s*-?\s*/i, '').slice(0, 50);
@@ -5039,7 +5048,7 @@ button:disabled { opacity: .6; cursor: default; }
                 '<span class="val-badge">opcional</span></header>' +
                 '<div class="plazo-form"><label class="plazo-fila"><span>Fecha de firma del contrato</span>' +
                 '<input type="date" id="val-plazo-firma" class="val-input" value="' + esc(pf.firma || '') + '"></label>' + filasP + '</div>' +
-                notaAuto + '<div class="val-nota">Días naturales contados desde la firma (1 semana = 7 días). Sin fecha de firma no se muestran las barras.</div></section>');
+                notaAuto + '<div id="val-cal-hitos">' + calendarioHitosHtml() + '</div><div class="val-nota">Días naturales contados desde la firma (1 semana = 7 días). Sin fecha de firma no se muestran las barras.</div></section>');
         }
 
         // ---------- contrato (cláusula 3.1)
@@ -5057,8 +5066,8 @@ button:disabled { opacity: .6; cursor: default; }
                     (hit.length
                         ? '<div class="val-nota"><strong>Plazos detectados en la cláusula 3 (a revisar):</strong> ' +
                           hit.map(function (h, i) { return 'Hito ' + (i + 1) + ': ' + h.dias + ' días' + (h.unidad === 'semanas' ? ' (' + h.n + ' semanas)' : ''); }).join(' · ') + '</div>' +
-                          '<div class="val-texto-acciones"><button class="btn-sec" id="btn-plazos-contrato">Rellenar las fases por orden con estos plazos</button>' +
-                          '<span class="nota-pie">Hito 1 → primera fase, y así sucesivamente. Revisa la correspondencia y escribe la fecha de firma antes de confirmar.</span></div>'
+                          '<div class="val-texto-acciones"><button class="btn-sec" id="btn-plazos-contrato">Rellenar cada fase con su hito (hito N → Fase N)</button>' +
+                          '<span class="nota-pie">Hito 1 → Fase 1, hito 2 → Fase 2, hito 3 → Fase 3, hito 4 → Fase 4; la fase sin hito queda vacía. Escribe la fecha de firma antes de confirmar.</span></div>'
                         : '') +
                     ((con.hitos || []).length ? '<div class="val-nota"><strong>Hitos de la cláusula 3.1 detectados:</strong> ' + con.hitos.map(function (h) { return 'Hito ' + h.n + ': ' + esc(h.plazoTxt) + ' (' + (h.definir || []).length + ' conceptos)'; }).join(' · ') + '. Se mostrarán en el resumen ejecutivo.</div>' : '') +
                     '<div class="plazo-form"><label class="plazo-fila"><span>Fecha de firma del contrato</span><input type="date" id="val-contrato-firma" class="val-input" value="' + esc(state.contratoFirma || (state.plazosForm && state.plazosForm.firma) || con.fechaFirma || '') + '"></label></div>' +
@@ -5452,16 +5461,28 @@ button:disabled { opacity: .6; cursor: default; }
         el = $('btn-confirmar');
         if (el) { el.onclick = confirmar; }
         Array.prototype.forEach.call(document.querySelectorAll('.val-plazo, #val-plazo-firma'), function (n) {
-            n.oninput = function () { leerPlazos(); };
+            n.oninput = function () {
+                if (n.id === 'val-plazo-firma') { var oc = $('val-contrato-firma'); if (oc) { oc.value = n.value; } state.contratoFirma = n.value; }
+                leerPlazos(); refrescarCalendarioHitos();
+            };
         });
+        var fcSync = $('val-contrato-firma');
+        if (fcSync) {
+            fcSync.oninput = function () {
+                var op = $('val-plazo-firma'); if (op) { op.value = fcSync.value; }
+                state.contratoFirma = fcSync.value;
+                leerPlazos(); refrescarCalendarioHitos();
+            };
+        }
+        
         var bpc = $('btn-plazos-contrato');
         if (bpc) {
             bpc.onclick = function () {
                 var hs = (state.extraido.contrato || {}).plazosHitos || [];
                 var ins = document.querySelectorAll('.val-plazo');
                 if (!ins.length) { alert('Para rellenar las fases hace falta cargar antes el Excel de definición de materiales.'); return; }
-                Array.prototype.forEach.call(ins, function (nn, ix) { if (hs[ix]) { nn.value = hs[ix].dias; } });
-                leerPlazos();
+                Array.prototype.forEach.call(ins, function (nn, ix) { var nF = numFase(nn.getAttribute('data-fase'), ix + 1); nn.value = hs[nF - 1] ? hs[nF - 1].dias : ''; });
+                leerPlazos(); refrescarCalendarioHitos();
             };
         }
 
@@ -5728,6 +5749,52 @@ button:disabled { opacity: .6; cursor: default; }
             penalizacionMaxPct: c.penalizacionMaxPct || null, penalizacionDesdeSemanas: c.penalizacionDesdeSemanas || null,
             ampliaPlazo: !!c.ampliaPlazo, firma: /^\d{4}-\d{2}-\d{2}$/.test(firma) ? firma : '', hitos: hs
         };
+    }
+
+    function numFase(nombre, def) { var m = String(nombre || '').match(/(\d+)/); return m ? parseInt(m[1], 10) : def; }
+
+    function calendarioHitosHtml() {
+        var m = state.extraido && state.extraido.excel5;
+        if (!m || !m.fases || !m.fases.length) { return ''; }
+        var pf = state.plazosForm || { firma: '', dias: {} };
+        var fm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(pf.firma || '');
+        var DIA = 86400000, ahora = new Date();
+        var hoy = Date.UTC(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+        var p2 = function (n) { return (n < 10 ? '0' : '') + n; };
+        var fmtF = function (t) { var d = new Date(t); return p2(d.getUTCDate()) + '/' + p2(d.getUTCMonth() + 1) + '/' + d.getUTCFullYear(); };
+        var ini = fm ? Date.UTC(+fm[1], +fm[2] - 1, +fm[3]) : null;
+        var items = m.items || [];
+        var hs = (state.extraido.contrato || {}).plazosHitos || [];
+        var filas = m.fases.map(function (f, ix) {
+            var nF = numFase(f.fase, ix + 1);
+            var dias = parseInt((pf.dias || {})[f.fase], 10);
+            var defs = items.length ? items.filter(function (i) { return i.fase === f.fase; }) : (f.definiciones || []);
+            var eleg = defs.filter(function (x) { return x.estado === 'ELEGIDO'; }).length;
+            var noproc = defs.filter(function (x) { return x.estado === 'NO PROCEDE'; }).length;
+            var base = defs.length - noproc;
+            var pct = base > 0 ? Math.round((eleg / base) * 100) : null;
+            var hito = hs.length ? (hs[nF - 1] ? 'Hito ' + nF : 'Sin hito') : (dias > 0 ? 'Manual' : '—');
+            var lim = '—', est, cls = 'c-gris';
+            if (dias > 0 && ini !== null) {
+                var l = ini + dias * DIA, restan = Math.round((l - hoy) / DIA);
+                lim = fmtF(l);
+                if (pct !== null && pct >= 100) { est = 'Completada'; cls = 'c-verde'; }
+                else if (restan > 0) { est = 'Quedan ' + restan + (restan === 1 ? ' día' : ' días'); cls = (restan / dias < 0.25) ? 'c-ambar' : 'c-verde'; }
+                else if (restan === 0) { est = 'Vence hoy'; cls = 'c-ambar'; }
+                else { est = 'Fuera de plazo · ' + (-restan) + (restan === -1 ? ' día' : ' días') + ' de descuadre'; cls = 'c-rojo'; }
+            } else if (dias > 0) { est = 'Falta la fecha de firma'; }
+            else { est = 'Sin plazo'; }
+            return '<tr><td><strong>' + esc(f.fase) + '</strong></td><td>' + hito + '</td><td>' + (dias > 0 ? dias + ' días' : '—') + '</td><td>' + lim + '</td><td class="' + cls + '">' + est + '</td><td>' + (pct === null ? 'sin datos' : pct + ' %') + '</td></tr>';
+        }).join('');
+        var pasados = (ini !== null && hoy >= ini) ? Math.round((hoy - ini) / DIA) : null;
+        return '<p class="cal-hoy"><strong>Hoy (fecha del informe):</strong> ' + fmtF(hoy) + ' · <strong>Firma del contrato:</strong> ' + (ini !== null ? fmtF(ini) : 'sin indicar') +
+            (pasados !== null ? ' · <strong>Días desde la firma:</strong> ' + pasados : '') + '</p>' +
+            '<div class="cal-hitos"><table><thead><tr><th>Fase</th><th>Hito</th><th>Plazo</th><th>Fecha límite</th><th>Estado a día de hoy</th><th>Definido</th></tr></thead><tbody>' + filas + '</tbody></table></div>';
+    }
+
+    function refrescarCalendarioHitos() {
+        var n = $('val-cal-hitos');
+        if (n) { n.innerHTML = calendarioHitosHtml(); }
     }
 
     function leerPlazos() {

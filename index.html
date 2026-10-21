@@ -631,6 +631,14 @@ button:disabled { opacity: .6; cursor: default; }
 .tabs-linea .tab:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }
 @media print { .tabs-linea { display: none !important; } }
 .sub-iva { display: block; font-size: 10.5px; color: #7a7e83; font-weight: 400; margin-top: 2px; }
+
+.hito-fila { padding: 8px 0; border-top: 1px solid #e3e5e8; }
+.hito-fila:first-child { border-top: 0; }
+.hito-def { margin: 4px 0 4px 6px; padding-left: 18px; font-size: 12px; color: #5b6066; }
+.hito-def li { margin: 2px 0; }
+.hito-nota { font-size: 11.5px; color: #6b7075; margin: 10px 0 0; }
+.pg-barra.gris { background: linear-gradient(90deg, #c9ccd0, #9a9fa6); }
+.pg-gris { color: #6b7075; }
 /*__CSS_FIN__*/
 </style>
 </head>
@@ -2629,6 +2637,55 @@ button:disabled { opacity: .6; cursor: default; }
             '<div class="pg">' + rows + '</div></div>';
     }
 
+    function contratoHitos(D) {
+        var c = D && D.contrato;
+        if (!c) { return ''; }
+        var hs = c.hitos || [];
+        if (!hs.length && !c.semanasTotal) { return ''; }
+        var DIA = 86400000, ahora = new Date();
+        var hoy = Date.UTC(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+        var p2 = function (n) { return (n < 10 ? '0' : '') + n; };
+        var fmtF = function (t) { var d = new Date(t); return p2(d.getUTCDate()) + '/' + p2(d.getUTCMonth() + 1) + '/' + d.getUTCFullYear(); };
+        var f0 = String(c.firma || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        var ini = f0 ? Date.UTC(+f0[1], +f0[2] - 1, +f0[3]) : null;
+        var maxDias = Math.max.apply(null, hs.map(function (h) { return h.dias; }).concat([1]));
+        var rows = hs.map(function (h) {
+            var w, cls, txt, tono, sub = 'desde la firma del contrato';
+            if (ini === null) {
+                w = Math.max(3, Math.min(100, (h.dias / maxDias) * 100)); cls = 'gris'; tono = 'gris'; txt = 'Sin fecha de firma';
+            } else {
+                var lim = ini + h.dias * DIA, restan = Math.round((lim - hoy) / DIA);
+                sub = 'límite ' + fmtF(lim);
+                if (restan > 0) {
+                    w = Math.max(3, Math.min(100, (restan / maxDias) * 100));
+                    cls = (restan / h.dias < 0.25) ? 'ambar' : 'verde'; tono = cls;
+                    txt = 'Quedan ' + restan + (restan === 1 ? ' día' : ' días');
+                } else if (restan === 0) {
+                    w = 100; cls = 'ambar'; tono = 'ambar'; txt = 'Vence hoy';
+                } else {
+                    w = 100; cls = 'gris'; tono = 'gris'; txt = 'Plazo vencido hace ' + (-restan) + (restan === -1 ? ' día' : ' días');
+                }
+            }
+            var defs = (h.definir || []).map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('');
+            return '<div class="hito-fila"><div class="pg-fila">' +
+                '<div class="pg-fase"><strong>Hito ' + esc(h.n) + '</strong><span>' + esc(h.plazoTxt) + ' · ' + sub + '</span></div>' +
+                '<div class="pg-pista"><div class="pg-barra ' + cls + '" style="width:' + w.toFixed(1) + '%"></div></div>' +
+                '<div class="pg-txt pg-' + tono + '">' + txt + '</div></div>' +
+                (defs ? '<ul class="hito-def">' + defs + '</ul>' : '') + '</div>';
+        }).join('');
+        var sb = [];
+        if (c.semanasTotal) { sb.push('Plazo máximo de ejecución: ' + c.semanasTotal + ' semanas desde el inicio de los trabajos.'); }
+        if (c.penalizacionEur) {
+            sb.push('Penalización diaria de ' + c.penalizacionEur + ' €' + (c.penalizacionDesdeSemanas ? ' una vez transcurridas ' + c.penalizacionDesdeSemanas + ' semanas' : '') +
+                (c.penalizacionMaxPct ? ', hasta un máximo del ' + c.penalizacionMaxPct + ' % del presupuesto' : '') + '.');
+        }
+        if (hs.length) { sb.push(ini !== null ? 'Los hitos se cuentan desde la firma del contrato (' + fmtF(ini) + ').' : 'Los hitos se cuentan desde la firma del contrato.'); }
+        var nota = (c.ampliaPlazo && hs.length) ? '<p class="hito-nota">El retraso en la definición o aprobación de cualquiera de los hitos amplía automáticamente el plazo de ejecución.</p>' : '';
+        return '<div class="bloque">' + filaCabecera('Plazos del contrato · cláusula 3.1', sb.join(' '),
+            hs.length ? hs.length + (hs.length === 1 ? ' hito' : ' hitos') : c.semanasTotal + ' semanas') +
+            (rows ? '<div class="pg">' + rows + '</div>' : '') + nota + '</div>';
+    }
+
     function tabResumen(D) {
         var k = kpisCabecera(D);
         var subIva = function (conI, sin) {
@@ -2646,6 +2703,7 @@ button:disabled { opacity: .6; cursor: default; }
             '</div>';
 
         html += roscosFases(D);
+        html += contratoHitos(D);
         html += plazosGrafico(D);
 
         var caps = capitulosUnificados(D);
@@ -3548,7 +3606,8 @@ button:disabled { opacity: .6; cursor: default; }
             factura: d.factura || null,
             materiales: d.materiales || null,
             obra: d.obra || null,
-            plazos: d.plazos || null
+            plazos: d.plazos || null,
+            contrato: d.contrato || null
         }));
         // 1) fuera todos los campos internos (_lineas, _hojas, _resumen, ...)
         limpiaInternos(copia);
@@ -4415,6 +4474,31 @@ button:disabled { opacity: .6; cursor: default; }
     }
 
     /* ---- Contrato: cláusula 3.1 «Plazos de ejecución de obra» ---- */
+    /** Hitos de la cláusula 3 (tabla «Hito · Plazo desde firma · Qué debe estar definido») y penalización. */
+    function extraerHitosContrato(lineas) {
+        var t = (lineas || []).join(' ').replace(/(\S)-\s+(?=[a-záéíóúñü])/g, '$1').replace(/\s+/g, ' ');
+        var out = { hitos: [], penalizacionEur: null, penalizacionMaxPct: null, penalizacionDesdeSemanas: null, ampliaPlazo: false };
+        var re = /\bHito\s*(\d{1,2})\s+(\d{1,3})\s*(d[ií]as?(?:\s+(?:naturales|h[aá]biles))?|semanas?)\s*([\s\S]*?)(?=\bHito\s*\d{1,2}\s+\d{1,3}\s*(?:d[ií]a|semana)|\bEl\s+retraso\b|$)/gi;
+        var m, vistos = {};
+        while ((m = re.exec(t)) !== null) {
+            var n = parseInt(m[1], 10), pn = parseInt(m[2], 10), sem = /^sem/i.test(m[3]);
+            if (vistos[n] || !(pn > 0)) { continue; }
+            vistos[n] = true;
+            var items = String(m[4] || '').split(/[•·●▪■]/).map(function (s) { return s.trim().replace(/[;,.]+$/, '').trim(); }).filter(function (s) { return s.length > 1; });
+            out.hitos.push({ n: n, plazoN: pn, unidad: sem ? 'semanas' : 'dias', dias: sem ? pn * 7 : pn,
+                plazoTxt: pn + ' ' + String(m[3]).toLowerCase().replace(/^dias/, 'días').replace(/^dia\b/, 'día'), definir: items });
+        }
+        out.hitos.sort(function (a, b) { return a.n - b.n; });
+        var pm = t.match(/penalizaci[oó]n\s+diaria\s+de\s+(\d[\d.,]*)\s*€/i);
+        if (pm) { out.penalizacionEur = pm[1]; }
+        pm = t.match(/m[aá]ximo\s+del\s+(\d{1,2}(?:[.,]\d+)?)\s*%/i);
+        if (pm) { out.penalizacionMaxPct = pm[1]; }
+        pm = t.match(/transcurridas\s+las\s+(\d{1,3})\s*semanas/i);
+        if (pm) { out.penalizacionDesdeSemanas = parseInt(pm[1], 10); }
+        out.ampliaPlazo = /ampliar[aá]\s+autom[aá]ticamente/i.test(t);
+        return out;
+    }
+
     function parsearContrato(lineas, opts) {
         opts = opts || {};
         var ls = (lineas || []).map(function (t) { return String(t).replace(/^[\s|\[\]·•]+/, '').trim(); }).filter(Boolean);
@@ -4471,6 +4555,13 @@ button:disabled { opacity: .6; cursor: default; }
             if (!saltado && sem && r.semanasTotal !== null && n === r.semanasTotal) { saltado = true; continue; }
             if (!(n > 0)) { continue; }
             r.plazosHitos.push({ n: n, unidad: sem ? 'semanas' : 'dias', dias: sem ? n * 7 : n });
+        }
+        var hh = extraerHitosContrato(r.clausula3);
+        r.penalizacionEur = hh.penalizacionEur; r.penalizacionMaxPct = hh.penalizacionMaxPct;
+        r.penalizacionDesdeSemanas = hh.penalizacionDesdeSemanas; r.ampliaPlazo = hh.ampliaPlazo;
+        if (hh.hitos.length) {
+            r.hitos = hh.hitos;
+            r.plazosHitos = hh.hitos.map(function (h) { return { n: h.plazoN, unidad: h.unidad, dias: h.dias }; });
         }
         return r;
     }
@@ -4969,6 +5060,8 @@ button:disabled { opacity: .6; cursor: default; }
                           '<div class="val-texto-acciones"><button class="btn-sec" id="btn-plazos-contrato">Rellenar las fases por orden con estos plazos</button>' +
                           '<span class="nota-pie">Hito 1 → primera fase, y así sucesivamente. Revisa la correspondencia y escribe la fecha de firma antes de confirmar.</span></div>'
                         : '') +
+                    ((con.hitos || []).length ? '<div class="val-nota"><strong>Hitos de la cláusula 3.1 detectados:</strong> ' + con.hitos.map(function (h) { return 'Hito ' + h.n + ': ' + esc(h.plazoTxt) + ' (' + (h.definir || []).length + ' conceptos)'; }).join(' · ') + '. Se mostrarán en el resumen ejecutivo.</div>' : '') +
+                    '<div class="plazo-form"><label class="plazo-fila"><span>Fecha de firma del contrato</span><input type="date" id="val-contrato-firma" class="val-input" value="' + esc(state.contratoFirma || (state.plazosForm && state.plazosForm.firma) || con.fechaFirma || '') + '"></label></div>' +
                     '<div class="val-nota">' + (con.mencionaMateriales
                         ? 'La cláusula menciona selección o definición de materiales. Si fija plazos por fase, introdúcelos en la tarjeta «Plazos de definición de materiales».'
                         : 'La cláusula no menciona plazos de selección de materiales: no se mostrarán barras de plazo, salvo que los introduzcas a mano.') + '</div>';
@@ -5622,6 +5715,21 @@ button:disabled { opacity: .6; cursor: default; }
 
     /* ---------------------------------------------------------------- confirmar */
 
+    function contratoDatos() {
+        var c = (state.extraido || {}).contrato;
+        if (!c || !c.hayClausula31) { return null; }
+        var hs = c.hitos || [];
+        if (!hs.length && !c.semanasTotal) { return null; }
+        var fi = $('val-contrato-firma');
+        var firma = (fi && fi.value) || state.contratoFirma || (state.plazosForm && state.plazosForm.firma) || c.fechaFirma || '';
+        state.contratoFirma = firma;
+        return {
+            semanasTotal: c.semanasTotal || null, penalizacionEur: c.penalizacionEur || null,
+            penalizacionMaxPct: c.penalizacionMaxPct || null, penalizacionDesdeSemanas: c.penalizacionDesdeSemanas || null,
+            ampliaPlazo: !!c.ampliaPlazo, firma: /^\d{4}-\d{2}-\d{2}$/.test(firma) ? firma : '', hitos: hs
+        };
+    }
+
     function leerPlazos() {
         var form = state.plazosForm || { firma: '', dias: {} };
         if (!form.dias) { form.dias = {}; }
@@ -5666,6 +5774,7 @@ button:disabled { opacity: .6; cursor: default; }
             materiales: (mat && mat.items && mat.items.length) ? mat : null,
             obra: (mat && mat._resumen) ? mat._resumen : null,
             plazos: leerPlazos(),
+            contrato: contratoDatos(),
             pem: pem, cert: cert, pct: pct
         };
 
@@ -5907,6 +6016,7 @@ button:disabled { opacity: .6; cursor: default; }
             !window.confirm('¿Empezar de nuevo desde el principio?\n\nSe quitarán los archivos cargados y el dashboard de esta pantalla. Los enlaces que ya hayas generado seguirán funcionando.')) {
             return;
         }
+        // 1) Limpieza en memoria de todo lo que pudiera arrastrarse de la obra anterior
         state.archivos = {};
         state.extraido = {};
         state.lineas = {};
@@ -5914,7 +6024,6 @@ button:disabled { opacity: .6; cursor: default; }
         state.datos = null;
         state.pestana = 'resumen';
         state.vista = 'generador';
-        // Todo lo que pudiera arrastrarse de la obra anterior
         state.identificador = '';
         state.periodo = '';
         state.identificadorManual = false;
@@ -5930,8 +6039,14 @@ button:disabled { opacity: .6; cursor: default; }
         state.avisoGlobal = '';
         state.progreso = 0;
         state.pasoActual = 0;
-        render();
-        try { window.scrollTo(0, 0); } catch (e) { /* nada */ }
+        try { render(); } catch (e1) { /* la recarga de abajo lo resuelve */ }
+        try { window.scrollTo(0, 0); } catch (e2) { /* nada */ }
+        // 2) Recarga limpia desde la dirección base de la app (sin ?c= ni #d=):
+        //    garantiza volver a la pantalla de carga de archivos.
+        try {
+            var base = String(location.href).split('#')[0].split('?')[0];
+            location.replace(base);
+        } catch (e3) { /* si no se puede recargar, queda la pantalla ya reiniciada */ }
     }
 
     /* -------------------------------------------------------------------- inicio */

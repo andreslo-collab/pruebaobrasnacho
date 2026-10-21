@@ -262,6 +262,30 @@ button:disabled { opacity: .6; cursor: default; }
 .formula { font-size: 13px; color: #3f4349; background: #f7f8f8; border-left: 3px solid #5a5f66; border-radius: 6px; padding: 9px 12px; margin: 12px 0 0; }
 .plegable { margin-top: 12px; }
 .plegable summary { cursor: pointer; font-size: 12.5px; font-weight: 700; color: #2f3338; padding: 8px 0; }
+.pr-lista { border: 1px solid #e3e5e8; border-radius: 6px; overflow: hidden; background: #fff; font-size: 12.5px; }
+.pr-fila { display: grid; grid-template-columns: 96px minmax(0, 1fr) 150px 80px 34px; align-items: center; column-gap: 10px; padding: 10px 14px; border-bottom: 1px solid #eef0f1; }
+.pr-fila .num { text-align: right; font-variant-numeric: tabular-nums; }
+.pr-th { background: #f7f8f8; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: #555a61; font-weight: 700; border-bottom: 2px solid #e3e5e8; }
+.pr-cap { font-weight: 700; color: #1d2024; background: #fff; }
+.pr-cap .pr-n { font-style: normal; font-weight: 500; font-size: 10.5px; color: #777c82; margin-left: 8px; }
+.pr-det > summary { list-style: none; cursor: pointer; transition: background .15s; }
+.pr-det > summary::-webkit-details-marker { display: none; }
+.pr-det > summary:hover { background: #f3f4f4; }
+.pr-det[open] > summary { background: #f3f4f4; border-bottom-color: #dfe2e4; }
+.pr-fl { justify-self: end; width: 8px; height: 8px; border-right: 2px solid #6b7075; border-bottom: 2px solid #6b7075; transform: rotate(-45deg); transition: transform .18s; margin-right: 4px; }
+.pr-det[open] > summary .pr-fl { transform: rotate(45deg); }
+.pr-cuerpo { background: #fafafa; border-bottom: 1px solid #dfe2e4; }
+.pr-sub { font-weight: 400; color: #3b4045; padding-top: 8px; padding-bottom: 8px; border-bottom: 1px solid #f0f1f2; }
+.pr-sub.pr-n2 .pr-d { padding-left: 14px; font-weight: 600; }
+.pr-sub.pr-n3 .pr-d { padding-left: 32px; color: #5c6167; }
+.pr-sub.pr-n4 .pr-d { padding-left: 50px; color: #5c6167; }
+.pr-tot { background: #f7f8f8; font-weight: 700; }
+.pr-tot:last-child { background: #1b1d1f; color: #fff; border-bottom: 0; }
+.pr-barra { display: flex; gap: 8px; margin: 4px 0 10px; }
+.pr-btn { border: 1px solid #d5d8db; background: #fff; border-radius: 4px; padding: 5px 12px; font-size: 11.5px; font-weight: 600; color: #3b4045; cursor: pointer; transition: background .15s, border-color .15s; }
+.pr-btn:hover { background: #f3f4f4; border-color: #9aa0a6; }
+@media (max-width: 700px) { .pr-fila { grid-template-columns: 64px minmax(0, 1fr) 96px 54px 20px; padding: 9px 8px; column-gap: 6px; } }
+@media print { .pr-lista { border-color: #999; } .pr-det .pr-cuerpo { display: block; } }
 .vacio { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 20px; text-align: center; color: #92400e; }
 .vacio strong { display: block; font-size: 14px; margin-bottom: 4px; }
 .vacio p { margin: 0; font-size: 12.5px; }
@@ -2682,20 +2706,42 @@ button:disabled { opacity: .6; cursor: default; }
             }
             return ['<span class="mono"><strong>' + esc(c.codigo) + '</strong></span>', '<strong>' + esc(c.descripcion) + '</strong>', '<strong>' + imp + '</strong>', pctDe(c)];
         };
-        var usadas = {}, filas = [];
-        caps.forEach(function (c) {
-            filas.push(fila(c, 1));
-            subs.filter(function (s) { return !usadas[s.codigo + '|' + s.descripcion] && String(s.codigo).indexOf(String(c.codigo)) === 0; })
-                .sort(function (x, y) { return x.codigo < y.codigo ? -1 : (x.codigo > y.codigo ? 1 : 0); })
-                .forEach(function (s) { usadas[s.codigo + '|' + s.descripcion] = 1; filas.push(fila(s, Math.max(2, s.nivel || 2))); });
-        });
-        subs.forEach(function (s) { if (!usadas[s.codigo + '|' + s.descripcion]) { filas.push(fila(s, Math.max(2, s.nivel || 2))); } });
-        filas.push(['', '<strong>Total (suma de capítulos)</strong>', '<strong>' + fmtMoney(pem) + '</strong>', '']);
-        if (iva !== null) { filas.push(['', '<strong>' + etqIva + '</strong>', '<strong>' + fmtMoney(iva) + '</strong>', '']); }
-        if (total !== null) { filas.push(['', '<strong>Total con IVA</strong>', '<strong>' + fmtMoney(total) + '</strong>', '']); }
-        html += '<div class="bloque">' + filaCabecera('Resumen por capítulos del presupuesto', 'Réplica del resumen contractual: capítulos y subcapítulos con su importe sin IVA; al final, la suma de capítulos y el total con IVA.',
+        var impDe = function (c) { return okN(c.importeSinIva) ? fmtMoney(c.importeSinIva) : '—'; };
+        var usadas = {};
+        var hijosDe = function (c) {
+            var cc = String(c.codigo);
+            return subs.filter(function (s) { return !usadas[s.codigo + '|' + s.descripcion] && String(s.codigo).indexOf(cc) === 0 && String(s.codigo) !== cc; })
+                .sort(function (x, y) { return x.codigo < y.codigo ? -1 : (x.codigo > y.codigo ? 1 : 0); });
+        };
+        var fSub = function (s) {
+            var niv = Math.min(4, Math.max(2, s.nivel || 2));
+            usadas[s.codigo + '|' + s.descripcion] = 1;
+            return '<div class="pr-fila pr-sub pr-n' + niv + '"><span class="mono">' + esc(s.codigo) + '</span><span class="pr-d">' + esc(s.descripcion) + '</span>' +
+                '<span class="num">' + impDe(s) + '</span><span class="num">' + pctDe(s) + '</span><span></span></div>';
+        };
+        var capsHtml = caps.map(function (c) {
+            var hijos = hijosDe(c);
+            var cab = '<span class="mono pr-cod">' + esc(c.codigo) + '</span><span class="pr-d">' + esc(c.descripcion) +
+                (hijos.length ? ' <em class="pr-n">' + hijos.length + (hijos.length === 1 ? ' apartado' : ' apartados') + '</em>' : '') + '</span>' +
+                '<span class="num">' + impDe(c) + '</span><span class="num">' + pctDe(c) + '</span>';
+            if (!hijos.length) {
+                return '<div class="pr-fila pr-cap pr-plano">' + cab + '<span></span></div>';
+            }
+            var cuerpo = hijos.map(fSub).join('');
+            return '<details class="pr-det"><summary class="pr-fila pr-cap">' + cab + '<span class="pr-fl" aria-hidden="true"></span></summary>' +
+                '<div class="pr-cuerpo">' + cuerpo + '</div></details>';
+        }).join('');
+        var sueltas = subs.filter(function (s) { return !usadas[s.codigo + '|' + s.descripcion]; }).map(fSub).join('');
+        var tot = function (etq, v) {
+            return '<div class="pr-fila pr-tot"><span></span><span class="pr-d">' + etq + '</span><span class="num">' + fmtMoney(v) + '</span><span></span><span></span></div>';
+        };
+        var totHtml = tot('Total (suma de capítulos)', pem) + (iva !== null ? tot(etqIva, iva) : '') + (total !== null ? tot('Total con IVA', total) : '');
+        html += '<div class="bloque">' + filaCabecera('Resumen por capítulos del presupuesto', 'Cada capítulo se abre para ver sus apartados y subapartados. Importes sin IVA; al final, la suma de capítulos y el total con IVA.',
             caps.length + ' capítulos / ' + subs.length + ' subcapítulos');
-        html += tabla(['Capítulo', 'Resumen', 'Total (sin IVA)', '%'], filas, ['', '', 'num', 'num']);
+        html += '<div class="pr-barra se-noprint"><button type="button" class="pr-btn" onclick="var d=this.closest(\'.bloque\').querySelectorAll(\'details.pr-det\');for(var i=0;i<d.length;i++){d[i].open=true;}">Abrir todos</button>' +
+            '<button type="button" class="pr-btn" onclick="var d=this.closest(\'.bloque\').querySelectorAll(\'details.pr-det\');for(var i=0;i<d.length;i++){d[i].open=false;}">Cerrar todos</button></div>';
+        html += '<div class="pr-lista"><div class="pr-fila pr-th"><span>Capítulo</span><span>Resumen</span><span class="num">Total (sin IVA)</span><span class="num">%</span><span></span></div>' +
+            capsHtml + sueltas + totHtml + '</div>';
         if (Math.abs(suma - pem) > 0.05) {
             html += '<p class="formula">Aviso: la suma de los capítulos (' + fmtMoney(suma) + ') difiere del total del PDF (' + fmtMoney(pem) + ').</p>';
         }
@@ -5890,6 +5936,15 @@ button:disabled { opacity: .6; cursor: default; }
         var mm = (location.search || '').match(/[?&]c=([A-Za-z0-9_-]{4,20})/);
         return mm ? mm[1] : null;
     }
+
+    window.addEventListener('beforeprint', function () {
+        var d = document.querySelectorAll('details.pr-det');
+        for (var i = 0; i < d.length; i++) { d[i]._ab = d[i].open; d[i].open = true; }
+    });
+    window.addEventListener('afterprint', function () {
+        var d = document.querySelectorAll('details.pr-det');
+        for (var i = 0; i < d.length; i++) { if (d[i]._ab === false) { d[i].open = false; } }
+    });
 
     function inicio() {
         cargarHistorial();

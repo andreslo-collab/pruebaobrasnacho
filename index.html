@@ -2657,24 +2657,47 @@ button:disabled { opacity: .6; cursor: default; }
     function tabPresupuesto(D) {
         var p = D.presupuesto;
         if (!p || !p.capitulos || !p.capitulos.length) { return sinDatos('Presupuesto no disponible', 'Carga el PDF 2 (presupuesto base) o pega el texto del resumen.'); }
+        var okN = function (v) { return v !== null && v !== undefined && !isNaN(v); };
+        var T = p.totales || {};
+        var caps = p.capitulos || [], subs = (p.subcapitulos || []).slice();
+        var suma = 0;
+        caps.forEach(function (c) { suma += c.importeSinIva || 0; });
+        var pem = okN(T.pem) ? T.pem : +suma.toFixed(2);
+        var ivaPct = okN(T.ivaPct) ? T.ivaPct : null;
+        var iva = okN(T.ivaImporte) ? T.ivaImporte : (ivaPct !== null ? +(pem * ivaPct / 100).toFixed(2) : null);
+        var total = okN(T.total) ? T.total : (iva !== null ? +(pem + iva).toFixed(2) : null);
+        var etqIva = ivaPct !== null ? 'IVA (' + fmtNum(ivaPct, 2) + ' %)' : 'IVA';
         var html = '<div class="kpis">' +
-            kpi('PEM (sin IVA)', fmtMoney(p.totales.pem), null, 'k-cyan') +
-            kpi('Tipo de IVA', p.totales.ivaPct === null ? '—' : fmtNum(p.totales.ivaPct, 2) + ' %', null) +
-            kpi('Cuota de IVA', fmtMoney(p.totales.ivaImporte)) +
-            kpi('Total con IVA', fmtMoney(p.totales.total), null, 'k-green') +
+            kpi('Suma de capítulos (sin IVA)', fmtMoney(pem), null, 'k-cyan') +
+            kpi('Tipo de IVA', ivaPct === null ? '—' : fmtNum(ivaPct, 2) + ' %', null) +
+            kpi('Cuota de IVA', fmtMoney(iva)) +
+            kpi('Total con IVA', fmtMoney(total), null, 'k-green') +
             '</div>';
-        html += '<div class="bloque">' + filaCabecera('Capítulos del presupuesto', 'Estructura jerárquica extraída del resumen contractual.',
-            p.capitulos.length + ' capítulos / ' + (p.subcapitulos || []).length + ' subcapítulos');
-        html += tabla(['Código', 'Capítulo', 'Importe s/IVA', '% s/Ppto'],
-            p.capitulos.map(function (c) {
-                return ['<span class="mono">' + esc(c.codigo) + '</span>', esc(c.descripcion), fmtMoney(c.importeSinIva), fmtPct(c.pesoPresupuesto, 3)];
-            }), ['', '', 'num', 'num']);
-        if ((p.subcapitulos || []).length) {
-            html += '<details class="plegable"><summary>Ver ' + p.subcapitulos.length + ' subcapítulos</summary>' +
-                tabla(['Código', 'Subcapítulo', 'Importe s/IVA', '% s/Ppto'],
-                    p.subcapitulos.map(function (c) {
-                        return ['<span class="mono">' + esc(c.codigo) + '</span>', esc(c.descripcion), fmtMoney(c.importeSinIva), fmtPct(c.pesoPresupuesto, 3)];
-                    }), ['', '', 'num', 'num']) + '</details>';
+        var pctDe = function (c) { return okN(c.pesoPresupuesto) ? fmtPct(c.pesoPresupuesto, 2) : '—'; };
+        var fila = function (c, niv) {
+            var imp = okN(c.importeSinIva) ? fmtMoney(c.importeSinIva) : '—';
+            if (niv > 1) {
+                return ['<span class="mono">' + esc(c.codigo) + '</span>',
+                    '<span style="display:block;padding-left:' + ((niv - 1) * 16) + 'px;color:#555">' + esc(c.descripcion) + '</span>', imp, pctDe(c)];
+            }
+            return ['<span class="mono"><strong>' + esc(c.codigo) + '</strong></span>', '<strong>' + esc(c.descripcion) + '</strong>', '<strong>' + imp + '</strong>', pctDe(c)];
+        };
+        var usadas = {}, filas = [];
+        caps.forEach(function (c) {
+            filas.push(fila(c, 1));
+            subs.filter(function (s) { return !usadas[s.codigo + '|' + s.descripcion] && String(s.codigo).indexOf(String(c.codigo)) === 0; })
+                .sort(function (x, y) { return x.codigo < y.codigo ? -1 : (x.codigo > y.codigo ? 1 : 0); })
+                .forEach(function (s) { usadas[s.codigo + '|' + s.descripcion] = 1; filas.push(fila(s, Math.max(2, s.nivel || 2))); });
+        });
+        subs.forEach(function (s) { if (!usadas[s.codigo + '|' + s.descripcion]) { filas.push(fila(s, Math.max(2, s.nivel || 2))); } });
+        filas.push(['', '<strong>Total (suma de capítulos)</strong>', '<strong>' + fmtMoney(pem) + '</strong>', '']);
+        if (iva !== null) { filas.push(['', '<strong>' + etqIva + '</strong>', '<strong>' + fmtMoney(iva) + '</strong>', '']); }
+        if (total !== null) { filas.push(['', '<strong>Total con IVA</strong>', '<strong>' + fmtMoney(total) + '</strong>', '']); }
+        html += '<div class="bloque">' + filaCabecera('Resumen por capítulos del presupuesto', 'Réplica del resumen contractual: capítulos y subcapítulos con su importe sin IVA; al final, la suma de capítulos y el total con IVA.',
+            caps.length + ' capítulos / ' + subs.length + ' subcapítulos');
+        html += tabla(['Capítulo', 'Resumen', 'Total (sin IVA)', '%'], filas, ['', '', 'num', 'num']);
+        if (Math.abs(suma - pem) > 0.05) {
+            html += '<p class="formula">Aviso: la suma de los capítulos (' + fmtMoney(suma) + ') difiere del total del PDF (' + fmtMoney(pem) + ').</p>';
         }
         html += '<div class="datos-ident"><span>Cliente: <strong>' + esc(p.ident.cliente || '—') + '</strong></span>' +
             '<span>Expediente: <strong>' + esc(p.ident.expediente || '—') + '</strong></span>' +
@@ -3829,7 +3852,7 @@ button:disabled { opacity: .6; cursor: default; }
     }
 
     /** Lee un PDF y devuelve las lineas de texto ya reconstruidas por el motor. */
-    async function leerPdf(file) {
+    async function leerPdf(file, selPaginas) {
         var lib = await asegurarPdfJs();
         if (!lib) {
             throw new Error('No se ha podido cargar el lector de PDF (sin conexión a internet). ' +
@@ -3839,7 +3862,11 @@ button:disabled { opacity: .6; cursor: default; }
         var pdf = await lib.getDocument({ data: buffer }).promise;
         var crudos = [];
         var paginas = [];
-        for (var p = 1; p <= pdf.numPages; p++) {
+        var listaPag = [];
+        if (typeof selPaginas === 'function') { listaPag = selPaginas(pdf.numPages) || []; }
+        else { for (var pp = 1; pp <= pdf.numPages; pp++) { listaPag.push(pp); } }
+        for (var pi = 0; pi < listaPag.length; pi++) {
+            var p = listaPag[pi];
             var page = await pdf.getPage(p);
             var cont = await page.getTextContent();
             var items = [];
@@ -3861,6 +3888,39 @@ button:disabled { opacity: .6; cursor: default; }
         var planas = [];
         for (var q = 0; q < paginas.length; q++) { planas = planas.concat(paginas[q]); }
         return { lineas: planas, numPaginas: pdf.numPages, items: planas, crudos: crudos };
+    }
+
+    /* ---- Presupuesto: el resumen por capítulos está SIEMPRE en las últimas páginas del PDF ----
+       Se leen solo la primera página (cabecera) y las tres últimas. Si el resumen no cuadra
+       con su propio total, devuelve null y se lee el documento entero como antes. */
+    function presupuestoDesdeUltimas(lectura) {
+        var n = (lectura && lectura.numPaginas) || 0;
+        if (!n || !lectura.lineas || !lectura.lineas.length) { return null; }
+        var ult = [], prim = [];
+        lectura.lineas.forEach(function (l) {
+            if (l.pagina >= n - 2) { ult.push(l.texto); }
+            else if (l.pagina === 1) { prim.push(l.texto); }
+        });
+        if (!ult.length) { return null; }
+        var r = parsearCon('presupuesto', ult, { origen: 'PDF', numPaginas: n });
+        if (!r.capitulos || !r.capitulos.length) { return null; }
+        var T = r.totales || {};
+        var suma = 0;
+        r.capitulos.forEach(function (c) { suma += c.importeSinIva; });
+        if (T.pem === null || T.pem === undefined || T.ivaPct === null || T.ivaPct === undefined) { return null; }
+        if (Math.abs(suma - T.pem) > Math.max(0.05, T.pem * 0.0001)) { return null; }
+        if (T.ivaImporte === null || T.ivaImporte === undefined) { T.ivaImporte = +(T.pem * T.ivaPct / 100).toFixed(2); }
+        if (T.total === null || T.total === undefined) { T.total = +(T.pem + T.ivaImporte).toFixed(2); }
+        if (prim.length) {
+            var r1 = DX.parseBudget(prim, {});
+            ['cliente', 'expediente', 'proyecto', 'fecha'].forEach(function (k) {
+                if (r1.ident && r1.ident[k]) { r.ident[k] = r1.ident[k]; }
+            });
+        }
+        r.sumaCapitulos = +suma.toFixed(2);
+        r.lecturaUltimasPaginas = true;
+        r._lineas = prim.concat(ult);
+        return r;
     }
 
     /* ---- Tabla "DETALLE OBRA EJECUTADA" y cuadro resumen de la ficha (por coordenadas) ---- */
@@ -4257,6 +4317,19 @@ button:disabled { opacity: .6; cursor: default; }
             return rtxt;
         }
         if (zona.tipo === 'pdf' || /\.pdf$/.test(nombre)) {
+            if (zona.parser === 'presupuesto') {
+                try {
+                    var rapida = await leerPdf(file, function (n) {
+                        var ps = [], pa, pb;
+                        if (n <= 6) { for (pa = 1; pa <= n; pa++) { ps.push(pa); } return ps; }
+                        ps.push(1);
+                        for (pb = n - 2; pb <= n; pb++) { ps.push(pb); }
+                        return ps;
+                    });
+                    var resRap = presupuestoDesdeUltimas(rapida);
+                    if (resRap) { return resRap; }
+                } catch (eRap) { /* si falla la lectura rápida se lee el documento completo */ }
+            }
             var lectura = await leerPdf(file);
             if (zona.parser === 'contrato') { return await leerContrato(file, lectura); }
             var res = parsearCon(zona.parser, soloTexto(lectura.lineas), { origen: 'PDF', numPaginas: lectura.numPaginas });
@@ -4638,7 +4711,7 @@ button:disabled { opacity: .6; cursor: default; }
                     '<label class="val-field"><span>Nº expediente</span>' + inputNum(pident.expediente, 'ident.expediente', 'pdf2') + '</label>' +
                     '<label class="val-field"><span>Proyecto / obra</span>' + inputNum(pident.proyecto, 'ident.proyecto', 'pdf2') + '</label>' +
                     '<label class="val-field"><span>Fecha</span>' + inputNum(pident.fecha, 'ident.fecha', 'pdf2') + '</label>' +
-                    '<label class="val-field destacado"><span>PEM (sin IVA)</span>' + inputNum(ptot.pem, 'totales.pem', 'pdf2') + '</label>' +
+                    '<label class="val-field destacado"><span>Suma de capítulos (sin IVA)</span>' + inputNum(ptot.pem, 'totales.pem', 'pdf2') + '</label>' +
                     '<label class="val-field"><span>Tipo de IVA (%)</span>' + inputNum(ptot.ivaPct, 'totales.ivaPct', 'pdf2') + '</label>' +
                     '<label class="val-field"><span>Cuota de IVA</span>' + inputNum(ptot.ivaImporte, 'totales.ivaImporte', 'pdf2') + '</label>' +
                     '<label class="val-field destacado"><span>Total con IVA</span>' + inputNum(ptot.total, 'totales.total', 'pdf2') + '</label>' +
@@ -4652,7 +4725,7 @@ button:disabled { opacity: .6; cursor: default; }
                     (pcaps.length
                         ? '<div class="val-tabla-scroll"><table class="val-tabla"><thead><tr><th>Código</th><th>Capítulo</th><th class="num">Importe s/IVA</th><th class="num">% s/Ppto</th></tr></thead><tbody>' + filas + '</tbody></table></div>'
                         : '<div class="val-aviso">No se han detectado capítulos. Pega el texto del resumen de presupuesto en el área de texto de la casilla del presupuesto.</div>');
-                partes.push(tarjetaCabecera('Presupuesto base (PDF 2)', 'Cabecera, totales y capítulos del resumen contractual.', cuerpo, pre, 'pdf2'));
+                partes.push(tarjetaCabecera('Presupuesto base (PDF 2)', (pre.lecturaUltimasPaginas ? 'Leído del resumen de las últimas páginas del PDF: capítulos, suma y total con IVA.' : 'Cabecera, totales y capítulos del resumen contractual.'), cuerpo, pre, 'pdf2'));
             } catch (err) { partes.push(bloqueFallo('Presupuesto base (PDF 2)', pre, err)); }
         }
 

@@ -648,6 +648,45 @@ button:disabled { opacity: .6; cursor: default; }
 .hito-nota { font-size: 11.5px; color: #6b7075; margin: 10px 0 0; }
 .pg-barra.gris { background: linear-gradient(90deg, #c9ccd0, #9a9fa6); }
 .pg-gris { color: #6b7075; }
+
+/* ===== calendario de hitos del contrato ===== */
+.tl { margin-top: 6px; }
+.tl-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 14px; }
+.tl-chips span { font-size: 11.5px; color: #2f3338; background: #f1f2f3; border: 1px solid #e3e5e8; padding: 4px 10px; }
+.tl-chips b { font-weight: 700; color: #0b0c0d; }
+.tl-fila, .tl-eje-fila { display: grid; grid-template-columns: minmax(150px, 220px) 1fr minmax(160px, 220px); gap: 14px; align-items: center; }
+.tl-fila { padding: 7px 0; border-top: 1px solid #eceef0; }
+.tl-lab { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: #2f3338; }
+.tl-lab span { font-size: 11px; color: #6b7075; }
+.tl-eje { position: relative; height: 22px; border-bottom: 1px solid #c9ccd0; }
+.tl-eje span { position: absolute; bottom: 3px; font-size: 10.5px; color: #6b7075; transform: translateX(-50%); white-space: nowrap; }
+.tl-eje span.t0 { transform: none; }
+.tl-eje .tl-hoy-et { top: 0; bottom: auto; background: #0b0c0d; color: #fff; font-weight: 700; padding: 1px 7px; letter-spacing: .06em; z-index: 3; }
+.tl-eje .tl-hoy-et.fin { transform: translateX(-100%); }
+.tl-pista { position: relative; height: 24px; background: #f3f4f5; }
+.tl-g { position: absolute; top: 0; bottom: 0; width: 1px; background: #e3e5e8; }
+.tl-plazo { position: absolute; left: 0; top: 5px; height: 14px; overflow: hidden; }
+.tl-trans { display: block; height: 100%; }
+.tl-plazo.verde { background: #c3e9cf; }
+.tl-plazo.verde .tl-trans { background: linear-gradient(90deg, #86efac, #15803d); }
+.tl-plazo.ambar { background: #fbe7a8; }
+.tl-plazo.ambar .tl-trans { background: linear-gradient(90deg, #fcd34d, #b45309); }
+.tl-plazo.rojo { background: #f6c7c7; }
+.tl-plazo.rojo .tl-trans { background: linear-gradient(90deg, #f87171, #b91c1c); }
+.tl-plazo.gris { background: #dcdfe2; }
+.tl-exceso { position: absolute; top: 5px; height: 14px; background: repeating-linear-gradient(45deg, #dc2626 0 5px, #fecaca 5px 10px); }
+.tl-hito { position: absolute; top: 3px; width: 3px; height: 18px; background: #0b0c0d; transform: translateX(-1.5px); z-index: 1; }
+.tl-hoy { position: absolute; top: -7px; bottom: -7px; width: 2px; background: #0b0c0d; transform: translateX(-1px); z-index: 2; }
+.tl-est { display: flex; flex-direction: column; gap: 1px; font-size: 13px; }
+.tl-est small { font-size: 11px; font-weight: 400; color: #6b7075; }
+.tl-verde strong { color: #15803d; } .tl-ambar strong { color: #b45309; } .tl-rojo strong { color: #c62828; } .tl-gris strong { color: #6b7075; }
+.tl-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin-top: 16px; }
+.tl-card { border: 1px solid #e3e5e8; padding: 10px 12px; background: #fafafa; font-size: 12px; color: #3a3f44; }
+.tl-card strong { font-size: 12.5px; color: #0b0c0d; }
+.tl-card ul { margin: 6px 0 0; padding-left: 16px; }
+.tl-card li { margin: 2px 0; }
+@media (max-width: 700px) { .tl-fila, .tl-eje-fila { grid-template-columns: 1fr; gap: 4px; } .tl-eje-fila > :first-child, .tl-eje-fila > :last-child { display: none; } }
+@media print { .tl-fila, .tl-card { break-inside: avoid; } .tl * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 /*__CSS_FIN__*/
 </style>
 </head>
@@ -2657,42 +2696,90 @@ button:disabled { opacity: .6; cursor: default; }
         var fmtF = function (t) { var d = new Date(t); return p2(d.getUTCDate()) + '/' + p2(d.getUTCMonth() + 1) + '/' + d.getUTCFullYear(); };
         var f0 = String(c.firma || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
         var ini = f0 ? Date.UTC(+f0[1], +f0[2] - 1, +f0[3]) : null;
-        var maxDias = Math.max.apply(null, hs.map(function (h) { return h.dias; }).concat([1]));
-        var rows = hs.map(function (h) {
-            var w, cls, txt, tono, sub = 'desde la firma del contrato';
-            if (ini === null) {
-                w = Math.max(3, Math.min(100, (h.dias / maxDias) * 100)); cls = 'gris'; tono = 'gris'; txt = 'Sin fecha de firma';
-            } else {
-                var lim = ini + h.dias * DIA, restan = Math.round((lim - hoy) / DIA);
-                sub = 'límite ' + fmtF(lim);
-                if (restan > 0) {
-                    w = Math.max(3, Math.min(100, (restan / maxDias) * 100));
-                    cls = (restan / h.dias < 0.25) ? 'ambar' : 'verde'; tono = cls;
-                    txt = 'Quedan ' + restan + (restan === 1 ? ' día' : ' días');
-                } else if (restan === 0) {
-                    w = 100; cls = 'ambar'; tono = 'ambar'; txt = 'Vence hoy';
-                } else {
-                    w = 100; cls = 'gris'; tono = 'gris'; txt = 'Plazo vencido hace ' + (-restan) + (restan === -1 ? ' día' : ' días');
+        var m = D.materiales || {}, items = m.items || [];
+        var pctHito = function (n) {
+            var fases = m.fases || [];
+            for (var i = 0; i < fases.length; i++) {
+                var dg = (String(fases[i].fase).match(/(\d+)/) || [])[1];
+                if (dg !== undefined && +dg === +n) {
+                    var defs = items.length ? items.filter(function (x) { return x.fase === fases[i].fase; }) : (fases[i].definiciones || []);
+                    var eleg = defs.filter(function (x) { return x.estado === 'ELEGIDO'; }).length;
+                    var np = defs.filter(function (x) { return x.estado === 'NO PROCEDE'; }).length;
+                    var base = defs.length - np;
+                    return { fase: fases[i].fase, pct: base > 0 ? (eleg / base) * 100 : null };
                 }
             }
-            var defs = (h.definir || []).map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('');
-            return '<div class="hito-fila"><div class="pg-fila">' +
-                '<div class="pg-fase"><strong>Hito ' + esc(h.n) + '</strong><span>' + esc(h.plazoTxt) + ' · ' + sub + '</span></div>' +
-                '<div class="pg-pista"><div class="pg-barra ' + cls + '" style="width:' + w.toFixed(1) + '%"></div></div>' +
-                '<div class="pg-txt pg-' + tono + '">' + txt + '</div></div>' +
-                (defs ? '<ul class="hito-def">' + defs + '</ul>' : '') + '</div>';
+            return null;
+        };
+        var maxDias = Math.max.apply(null, hs.map(function (h) { return h.dias; }).concat([1]));
+        var diasHoy = ini !== null ? Math.round((hoy - ini) / DIA) : null;
+        var tope = maxDias * 1.1;
+        if (diasHoy !== null && diasHoy > maxDias) { tope = Math.min(diasHoy * 1.05, maxDias * 2.4); }
+        var fuera = diasHoy !== null && diasHoy > tope;
+        var pos = function (d) { return Math.max(0, Math.min(100, (d / tope) * 100)); };
+        var paso = tope <= 70 ? 7 : (tope <= 140 ? 14 : 28);
+        var ticks = '', grid = '';
+        for (var d = 0; d <= tope; d += paso) {
+            ticks += '<span' + (d === 0 ? ' class="t0"' : '') + ' style="left:' + pos(d).toFixed(2) + '%">' + (d === 0 ? 'Firma' : 'S' + (d / 7)) + '</span>';
+            grid += '<i class="tl-g" style="left:' + pos(d).toFixed(2) + '%"></i>';
+        }
+        var hoyPos = diasHoy !== null ? pos(diasHoy) : null;
+        var hoyLinea = hoyPos !== null ? '<i class="tl-hoy" style="left:' + hoyPos.toFixed(2) + '%"></i>' : '';
+        var hoyEt = hoyPos !== null
+            ? '<span class="tl-hoy-et' + (fuera ? ' fin' : '') + '" style="left:' + hoyPos.toFixed(2) + '%">HOY' + (fuera ? ' · día ' + diasHoy + ' ▸' : '') + '</span>'
+            : '';
+        var rows = hs.map(function (h) {
+            var info = pctHito(h.n);
+            var pct = info ? info.pct : null;
+            var hecha = pct !== null && pct >= 100;
+            var w = pos(h.dias), cls, tono, estado, sub = h.plazoTxt, bar, over = '', marca = '';
+            if (ini === null) {
+                cls = 'gris'; tono = 'gris'; estado = 'Sin fecha de firma';
+                bar = '<div class="tl-plazo gris" style="width:' + w.toFixed(2) + '%"></div>';
+            } else {
+                var lim = ini + h.dias * DIA, restan = Math.round((lim - hoy) / DIA);
+                sub = h.plazoTxt + ' · límite ' + fmtF(lim);
+                var trans = hecha ? h.dias : Math.max(0, Math.min(h.dias, diasHoy));
+                if (hecha) { cls = 'verde'; tono = 'verde'; estado = 'Definido (100 %)'; }
+                else if (restan > 0) {
+                    cls = (restan / h.dias < 0.25) ? 'ambar' : 'verde'; tono = cls;
+                    estado = 'Quedan ' + restan + (restan === 1 ? ' día' : ' días');
+                } else if (restan === 0) { cls = 'ambar'; tono = 'ambar'; estado = 'Vence hoy'; }
+                else {
+                    cls = 'rojo'; tono = 'rojo';
+                    estado = 'Fuera de plazo · ' + (-restan) + (restan === -1 ? ' día' : ' días') + ' de descuadre';
+                    over = '<div class="tl-exceso" style="left:' + w.toFixed(2) + '%;width:' + Math.max(0, pos(diasHoy) - w).toFixed(2) + '%"></div>';
+                }
+                bar = '<div class="tl-plazo ' + cls + '" style="width:' + w.toFixed(2) + '%"><i class="tl-trans" style="width:' + (trans / h.dias * 100).toFixed(1) + '%"></i></div>';
+                marca = '<i class="tl-hito" style="left:' + w.toFixed(2) + '%"></i>';
+            }
+            var detalle = pct !== null ? fmtPct(pct, 0) + ' definido · ' + esc(info.fase) : (info ? 'sin datos de definición' : 'sin Excel de definición');
+            return '<div class="tl-fila"><div class="tl-lab"><strong>Hito ' + esc(h.n) + '</strong><span>' + esc(sub) + '</span></div>' +
+                '<div class="tl-pista">' + grid + bar + over + marca + hoyLinea + '</div>' +
+                '<div class="tl-est tl-' + tono + '"><strong>' + estado + '</strong><small>' + detalle + '</small></div></div>';
         }).join('');
+        var cards = hs.filter(function (h) { return h.definir && h.definir.length; }).map(function (h) {
+            return '<div class="tl-card"><strong>Hito ' + esc(h.n) + ' · ' + esc(h.plazoTxt) + '</strong><ul>' +
+                h.definir.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul></div>';
+        }).join('');
+        var chips = '<div class="tl-chips">' +
+            (ini !== null ? '<span>Firma del contrato: <b>' + fmtF(ini) + '</b></span><span>Hoy: <b>' + fmtF(hoy) + '</b></span><span>Día <b>' + diasHoy + '</b> desde la firma</span>' : '<span>Falta la fecha de firma para calcular los límites</span>') +
+            (c.semanasTotal ? '<span>Plazo máximo de ejecución: <b>' + c.semanasTotal + ' semanas</b></span>' : '') +
+            '</div>';
         var sb = [];
-        if (c.semanasTotal) { sb.push('Plazo máximo de ejecución: ' + c.semanasTotal + ' semanas desde el inicio de los trabajos.'); }
         if (c.penalizacionEur) {
             sb.push('Penalización diaria de ' + c.penalizacionEur + ' €' + (c.penalizacionDesdeSemanas ? ' una vez transcurridas ' + c.penalizacionDesdeSemanas + ' semanas' : '') +
                 (c.penalizacionMaxPct ? ', hasta un máximo del ' + c.penalizacionMaxPct + ' % del presupuesto' : '') + '.');
         }
-        if (hs.length) { sb.push(ini !== null ? 'Los hitos se cuentan desde la firma del contrato (' + fmtF(ini) + ').' : 'Los hitos se cuentan desde la firma del contrato.'); }
+        if (hs.length) { sb.push('Los hitos se cuentan desde la firma del contrato.'); }
         var nota = (c.ampliaPlazo && hs.length) ? '<p class="hito-nota">El retraso en la definición o aprobación de cualquiera de los hitos amplía automáticamente el plazo de ejecución.</p>' : '';
-        return '<div class="bloque">' + filaCabecera('Plazos del contrato · cláusula 3.1', sb.join(' '),
+        var eje = hs.length
+            ? '<div class="tl-eje-fila"><div></div><div class="tl-eje">' + ticks + hoyEt + '</div><div></div></div>'
+            : '';
+        return '<div class="bloque">' + filaCabecera('Calendario de hitos del contrato · cláusula 3.1', sb.join(' '),
             hs.length ? hs.length + (hs.length === 1 ? ' hito' : ' hitos') : c.semanasTotal + ' semanas') +
-            (rows ? '<div class="pg">' + rows + '</div>' : '') + nota + '</div>';
+            '<div class="tl">' + chips + eje + rows + '</div>' +
+            (cards ? '<div class="tl-cards">' + cards + '</div>' : '') + nota + '</div>';
     }
 
     function tabResumen(D) {
@@ -2713,7 +2800,7 @@ button:disabled { opacity: .6; cursor: default; }
 
         html += roscosFases(D);
         html += contratoHitos(D);
-        html += plazosGrafico(D);
+        html += (D.contrato && D.contrato.hitos && D.contrato.hitos.length && /^\d{4}-\d{2}-\d{2}$/.test(String(D.contrato.firma || ''))) ? '' : plazosGrafico(D);
 
         var caps = capitulosUnificados(D);
         if (caps.length) {

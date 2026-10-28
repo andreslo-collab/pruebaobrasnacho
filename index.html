@@ -2468,6 +2468,26 @@ button:disabled { opacity: .6; cursor: default; }
             .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     }
 
+    function statsDefs(defs) {
+        defs = defs || [];
+        var c = { total: defs.length, eleg: 0, modif: 0, noproc: 0, pend: 0, proc: 0, sin: 0, otros: 0 };
+        defs.forEach(function (x) {
+            var e = String((x && x.estado) || '').toUpperCase().replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '');
+            if (e === 'ELEGIDO') { c.eleg++; }
+            else if (e === 'MODIFICADO') { c.modif++; }
+            else if (e === 'NO PROCEDE') { c.noproc++; }
+            else if (e === 'PENDIENTE') { c.pend++; }
+            else if (e === 'EN PROCESO') { c.proc++; }
+            else if (e === '' || e === 'SIN ESTADO') { c.sin++; }
+            else { c.otros++; }
+        });
+        /* Cerrada = todo menos pendiente y en proceso (elegido, modificado y no procede cuentan como decididos). */
+        c.abiertas = c.pend + c.proc + c.sin + c.otros;
+        c.hechas = c.total - c.abiertas;
+        c.pct = c.total > 0 ? (c.hechas / c.total) * 100 : null;
+        return c;
+    }
+
     function resumenEstados(items) {
         var mapa = {};
         items.forEach(function (i) { mapa[i.estado] = (mapa[i.estado] || 0) + 1; });
@@ -2609,12 +2629,9 @@ button:disabled { opacity: .6; cursor: default; }
         var C = 2 * Math.PI * 48;
         var cards = m.fases.map(function (f, ix) {
             var defs = items.length ? items.filter(function (i) { return i.fase === f.fase; }) : (f.definiciones || []);
-            var eleg = defs.filter(function (x) { return x.estado === 'ELEGIDO'; }).length;
-            var noproc = defs.filter(function (x) { return x.estado === 'NO PROCEDE'; }).length;
-            var pend = defs.filter(function (x) { return x.estado === 'PENDIENTE'; }).length;
-            var proc = defs.filter(function (x) { return x.estado === 'EN PROCESO'; }).length;
-            var base = defs.length - noproc;
-            var pct = base > 0 ? (eleg / base) * 100 : null;
+            var st = statsDefs(defs);
+            var hechas = st.hechas, base = st.total, pend = st.pend + st.sin + st.otros, proc = st.proc;
+            var pct = st.pct;
             var long = pct === null ? 0 : Math.max(0, Math.min(100, pct)) * C / 100;
             var gid = 'rg' + ix;
             var tit = (f.titulo || '').replace(/^FASE\s*\d+\s*-?\s*/i, '').slice(0, 48);
@@ -2627,12 +2644,12 @@ button:disabled { opacity: .6; cursor: default; }
                 '</svg>' +
                 '<span class="rosco-fase">' + esc(f.fase) + '</span>' +
                 '<span class="rosco-tit">' + esc(tit) + '</span>' +
-                '<span class="rosco-det">' + eleg + ' de ' + base + ' elegidas</span>' +
+                '<span class="rosco-det">' + hechas + ' de ' + base + ' definidas</span>' +
                 '<span class="rosco-sub">' + pend + ' pendientes · ' + proc + ' en proceso</span>' +
                 plazoFaseHtml(D, f.fase, pct) +
                 '</div>';
         }).join('');
-        return '<div class="bloque">' + filaCabecera('Definición de materiales', 'Porcentaje de definiciones elegidas en cada fase.', m.fases.length + ' fases') +
+        return '<div class="bloque">' + filaCabecera('Definición de materiales', 'Definiciones cerradas en cada fase: todas salvo las pendientes y las que están en proceso.', m.fases.length + ' fases') +
             '<div class="roscos">' + cards + '</div></div>';
     }
 
@@ -2652,10 +2669,7 @@ button:disabled { opacity: .6; cursor: default; }
             var dias = parseInt(p.fases[f.fase], 10);
             if (!dias || dias <= 0) { return; }
             var defs = items.length ? items.filter(function (i) { return i.fase === f.fase; }) : (f.definiciones || []);
-            var eleg = defs.filter(function (x) { return x.estado === 'ELEGIDO'; }).length;
-            var noproc = defs.filter(function (x) { return x.estado === 'NO PROCEDE'; }).length;
-            var base = defs.length - noproc;
-            var pct = base > 0 ? (eleg / base) * 100 : null;
+            var pct = statsDefs(defs).pct;
             var lim = ini + dias * DIA;
             filas.push({ fase: f.fase, hito: (String(f.fase).match(/(\d+)/) || [])[1] || '', dias: dias, restan: Math.round((lim - hoy) / DIA), lim: lim, pct: pct, hecha: pct !== null && pct >= 100 });
         });
@@ -2703,10 +2717,7 @@ button:disabled { opacity: .6; cursor: default; }
                 var dg = (String(fases[i].fase).match(/(\d+)/) || [])[1];
                 if (dg !== undefined && +dg === +n) {
                     var defs = items.length ? items.filter(function (x) { return x.fase === fases[i].fase; }) : (fases[i].definiciones || []);
-                    var eleg = defs.filter(function (x) { return x.estado === 'ELEGIDO'; }).length;
-                    var np = defs.filter(function (x) { return x.estado === 'NO PROCEDE'; }).length;
-                    var base = defs.length - np;
-                    return { fase: fases[i].fase, pct: base > 0 ? (eleg / base) * 100 : null };
+                    return { fase: fases[i].fase, pct: statsDefs(defs).pct };
                 }
             }
             return null;
@@ -3259,17 +3270,15 @@ button:disabled { opacity: .6; cursor: default; }
         html += '<div class="fases-grid">';
         porFase.forEach(function (f) {
             var defs = f.definiciones || [];
-            var eleg = defs.filter(function (x) { return x.estado === 'ELEGIDO'; }).length;
-            var noproc = defs.filter(function (x) { return x.estado === 'NO PROCEDE'; }).length;
-            var pend = defs.filter(function (x) { return x.estado === 'PENDIENTE'; }).length;
-            var base = defs.length - noproc;
-            var pctFase = base > 0 ? (eleg / base) * 100 : null;
+            var st = statsDefs(defs);
+            var hechas = st.hechas, pend = st.pend + st.sin + st.otros, proc = st.proc;
+            var pctFase = st.pct;
             html += '<button class="fase-card' + (ff === f.fase ? ' activa' : '') + '" data-fase="' + esc(f.fase) + '">' +
                 '<span class="fase-nombre">' + esc(f.fase) + '</span>' +
                 '<span class="fase-titulo">' + esc((f.titulo || '').replace(/^FASE\s*\d+\s*-?\s*/i, '').slice(0, 60) || 'Definición') + '</span>' +
                 '<span class="fase-num">' + defs.length + ' definiciones</span>' +
                 barra(pctFase, 'b-green') +
-                '<span class="fase-detalle">' + eleg + ' elegidas · ' + pend + ' pendientes · ' + noproc + ' no procede</span>' +
+                '<span class="fase-detalle">' + hechas + ' definidas · ' + pend + ' pendientes · ' + proc + ' en proceso</span>' +
                 plazoFaseHtml(D, f.fase, pctFase) +
                 '</button>';
         });
@@ -3343,15 +3352,14 @@ button:disabled { opacity: .6; cursor: default; }
             html += '<div class="bloque">' + filaCabecera('Avance de fases',
                 'Estado declarado en el resumen de obra y definiciones registradas en cada fase.', o.fases.length + ' fases');
             html += '<div class="tabla-scroll"><table class="tabla"><thead><tr>' +
-                '<th>Fase</th><th>Definiciones</th><th>Elegidas</th><th>Pendientes</th><th>Avance</th><th>Estado en el resumen</th>' +
+                '<th>Fase</th><th>Definiciones</th><th>Definidas</th><th>Pendientes</th><th>Avance</th><th>Estado en el resumen</th>' +
                 '</tr></thead><tbody>';
             o.fases.forEach(function (f) {
                 var fd = defs.filter(function (x) { return (x.fase || '').toUpperCase() === (f.fase || '').toUpperCase(); })[0];
                 var lista = fd ? (fd.definiciones || []) : [];
-                var eleg = lista.filter(function (x) { return x.estado === 'ELEGIDO'; }).length;
-                var noproc = lista.filter(function (x) { return x.estado === 'NO PROCEDE'; }).length;
-                var pend = lista.filter(function (x) { return x.estado === 'PENDIENTE'; }).length;
-                var pct = (lista.length - noproc) > 0 ? (eleg / (lista.length - noproc)) * 100 : null;
+                var stL = statsDefs(lista);
+                var eleg = stL.hechas, pend = stL.abiertas;
+                var pct = stL.pct;
                 html += '<tr><td><strong>' + esc(f.fase) + '</strong></td>' +
                     '<td class="num">' + (lista.length || '—') + '</td>' +
                     '<td class="num">' + (lista.length ? eleg : '—') + '</td>' +
@@ -5845,7 +5853,27 @@ button:disabled { opacity: .6; cursor: default; }
 
     function numFase(nombre, def) { var m = String(nombre || '').match(/(\d+)/); return m ? parseInt(m[1], 10) : def; }
 
-    function calendarioHitosHtml() {
+    function statsDefs(defs) {
+        defs = defs || [];
+        var c = { total: defs.length, eleg: 0, modif: 0, noproc: 0, pend: 0, proc: 0, sin: 0, otros: 0 };
+        defs.forEach(function (x) {
+            var e = String((x && x.estado) || '').toUpperCase().replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '');
+            if (e === 'ELEGIDO') { c.eleg++; }
+            else if (e === 'MODIFICADO') { c.modif++; }
+            else if (e === 'NO PROCEDE') { c.noproc++; }
+            else if (e === 'PENDIENTE') { c.pend++; }
+            else if (e === 'EN PROCESO') { c.proc++; }
+            else if (e === '' || e === 'SIN ESTADO') { c.sin++; }
+            else { c.otros++; }
+        });
+        /* Cerrada = todo menos pendiente y en proceso (elegido, modificado y no procede cuentan como decididos). */
+        c.abiertas = c.pend + c.proc + c.sin + c.otros;
+        c.hechas = c.total - c.abiertas;
+        c.pct = c.total > 0 ? (c.hechas / c.total) * 100 : null;
+        return c;
+    }
+
+        function calendarioHitosHtml() {
         var m = state.extraido && state.extraido.excel5;
         if (!m || !m.fases || !m.fases.length) { return ''; }
         var pf = state.plazosForm || { firma: '', dias: {} };
@@ -5861,10 +5889,8 @@ button:disabled { opacity: .6; cursor: default; }
             var nF = numFase(f.fase, ix + 1);
             var dias = parseInt((pf.dias || {})[f.fase], 10);
             var defs = items.length ? items.filter(function (i) { return i.fase === f.fase; }) : (f.definiciones || []);
-            var eleg = defs.filter(function (x) { return x.estado === 'ELEGIDO'; }).length;
-            var noproc = defs.filter(function (x) { return x.estado === 'NO PROCEDE'; }).length;
-            var base = defs.length - noproc;
-            var pct = base > 0 ? Math.round((eleg / base) * 100) : null;
+            var stF = statsDefs(defs);
+            var pct = stF.pct === null ? null : Math.round(stF.pct);
             var hito = hs.length ? (hs[nF - 1] ? 'Hito ' + nF : 'Sin hito') : (dias > 0 ? 'Manual' : '—');
             var lim = '—', est, cls = 'c-gris';
             if (dias > 0 && ini !== null) {

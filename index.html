@@ -4625,6 +4625,9 @@ button:disabled { opacity: .6; cursor: default; }
         var m = tx.match(new RegExp('\\ben\\s+[a-z ]{3,25},?\\s*a\\s+(\\d{1,2})\\s*(?:de\\s+)?' + meses + '\\s*(?:de|del)?\\s*(20\\d{2})'));
         if (!m) { m = tx.match(new RegExp('(\\d{1,2})\\s*(?:de\\s+)?' + meses + '\\s*(?:de|del)?\\s*(20\\d{2})')); }
         if (m && +m[1] >= 1 && +m[1] <= 31) { return { iso: m[3] + '-' + p2(MES[m[2]]) + '-' + p2(+m[1]), origen: 'texto del contrato' }; }
+        var txAll = (lineas || []).join(' ').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        var m2 = txAll.match(new RegExp('\\b[a-z]{3,20},\\s*a\\s+(\\d{1,2})\\s+de\\s+' + meses + '\\s+de\\s+(2\\.?0\\d{2})\\b'));
+        if (m2 && +m2[1] >= 1 && +m2[1] <= 31) { return { iso: m2[3].replace('.', '') + '-' + p2(MES[m2[2]]) + '-' + p2(+m2[1]), origen: 'texto del contrato (fecha de firma)' }; }
         var f = String(nombre || '').match(/(20\d{2})[-_.](\d{2})[-_.](\d{2})/);
         if (f && +f[2] >= 1 && +f[2] <= 12 && +f[3] >= 1 && +f[3] <= 31) { return { iso: f[1] + '-' + f[2] + '-' + f[3], origen: 'nombre del archivo' }; }
         return null;

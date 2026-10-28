@@ -5905,24 +5905,30 @@ button:disabled { opacity: .6; cursor: default; }
         return f ? String(f) : '';
     }
 
-    /** Importe de la factura CON IVA para el correo. Devuelve { valor, seguro }. */
+    /** Importe de la factura CON IVA para el correo. Sale SIEMPRE de la factura emitida (PDF 4), nunca de la certificación.
+     *  Devuelve { valor, seguro, sinFactura }. */
     function importeFacturaConIva(D) {
-        var f = (D.factura && D.factura.totales) || {};
+        var fa = D.factura || {};
+        var f = fa.totales || {};
+        var pie = fa.pie || {};
         var c = (D.certificacion && D.certificacion.totales) || {};
-        // 0) Prioridad: "Total con IVA" de la certificación (PDF 1), el mismo que se ve en la validación
-        if (hayValor(c.total) && c.total > 0) { return { valor: c.total, seguro: true }; }
-        var pct = hayValor(f.ivaPct) ? f.ivaPct : (hayValor(c.ivaPct) ? c.ivaPct : null);
+        var pct = hayValor(f.ivaPct) ? f.ivaPct : null;
         var r2 = function (x) { return Math.round(x * 100) / 100; };
-        var casi = function (a, b) { return hayValor(a) && hayValor(b) && Math.abs(a - b) < 0.02; };
-        // 1) Base conocida: base + IVA
+        var casi = function (a, b) { return hayValor(a) && hayValor(b) && Math.abs(a - b) < 0.06; };
+        var hayTotal = hayValor(f.total) && f.total > 0;
+        // 1) Pie completo de la factura: Base + IVA (+/- RE, suplidos, IRPF, retención) = TOTAL FACTURA
+        if (hayTotal && hayValor(f.base) && hayValor(f.iva)) {
+            var extra = (pie.cuotaRE || 0) + (pie.suplidos || 0) - (pie.irpf || 0) - (pie.retGat || 0);
+            if (casi(f.base + f.iva, f.total) || casi(f.base + f.iva + extra, f.total)) { return { valor: f.total, seguro: true }; }
+            return { valor: r2(f.base + f.iva), seguro: false };
+        }
+        // 2) Base conocida: base + IVA
         if (hayValor(f.base)) {
             var iva = hayValor(f.iva) ? f.iva : (pct !== null ? r2(f.base * pct / 100) : null);
             if (iva !== null) { return { valor: r2(f.base + iva), seguro: true }; }
         }
-        if (!hayValor(f.total)) {
-            return hayValor(c.total) ? { valor: c.total, seguro: false } : { valor: null, seguro: false };
-        }
-        // 2) Solo "total": comprobar si ya incluye IVA o es la base
+        if (!hayTotal) { return { valor: null, seguro: false, sinFactura: true }; }
+        // 3) Solo "total" de la factura: comprobar si ya incluye IVA o es la base
         if (hayValor(f.iva) && f.iva > 0) {
             if (pct !== null) {
                 if (Math.abs(f.iva / f.total - pct / 100) < 0.003) { return { valor: r2(f.total + f.iva), seguro: true }; }
@@ -5930,13 +5936,15 @@ button:disabled { opacity: .6; cursor: default; }
             }
             if (f.total > f.iva * 3) { return { valor: r2(f.total + f.iva), seguro: false }; }
         }
-        // 3) Contraste con la certificación
+        // 4) La certificación solo sirve para decidir si el total de la factura ya lleva IVA; el importe es siempre el de la factura
         if (casi(f.total, c.total)) { return { valor: f.total, seguro: true }; }
         if (casi(f.total, c.actual) || casi(f.total, c.origen)) {
-            if (pct !== null) { return { valor: r2(f.total * (1 + pct / 100)), seguro: true }; }
+            var pc = pct !== null ? pct : (hayValor(c.ivaPct) ? c.ivaPct : null);
+            if (pc !== null) { return { valor: r2(f.total * (1 + pc / 100)), seguro: true }; }
         }
-        // 4) Sin pistas: se asume base si hay % de IVA, y se avisa
-        if (pct !== null) { return { valor: r2(f.total * (1 + pct / 100)), seguro: false }; }
+        // 5) Sin pistas: se asume base si hay % de IVA, y se avisa
+        var pg = pct !== null ? pct : (hayValor(c.ivaPct) ? c.ivaPct : null);
+        if (pg !== null) { return { valor: r2(f.total * (1 + pg / 100)), seguro: false }; }
         return { valor: f.total, seguro: false };
     }
 
@@ -5960,7 +5968,7 @@ button:disabled { opacity: .6; cursor: default; }
             'Acompañando a dicha factura se adjunta la certificación técnica detallada y desglosada a origen, emitida por nuestro departamento de producción / arquitectura, junto con Presupuesto general de obra actualizado, y ficha de seguimiento económico.\n\n' +
             'Puede consultar el seguimiento completo de la obra en este enlace:\n' + url + '\n\n' +
             'Pueden realizar el ingreso, en la cuenta corriente que figura en la propia factura y a continuación se detalla.\n\n' +
-            (hayValor(impIva.valor) ? fmtMoney(impIva.valor) + ' (IVA incluido)' + (impIva.seguro ? '' : ' [REVISAR: no se ha podido comprobar el IVA]') + '\n' : '') +
+            (hayValor(impIva.valor) ? fmtMoney(impIva.valor) + ' (IVA incluido)' + (impIva.seguro ? '' : ' [REVISAR: no se ha podido comprobar el IVA de la factura]') + '\n' : '[REVISAR: no hay factura cargada; escribe aquí el importe de la factura con IVA]\n') +
             CUENTA_INGRESO + '\n\n' +
             'Ante cualquier consulta/aclaración no dude en ponerse en contacto con nosotros, estamos a su entera disposición.\n\n' +
             'Atentamente,';

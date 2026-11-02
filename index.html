@@ -3143,17 +3143,17 @@ button:disabled { opacity: .6; cursor: default; }
             var maxv = capsOri.reduce(function (a, x) { return Math.max(a, x.origen); }, 0) || 1;
             var top = capsOri.slice().sort(function (x, y) { return y.origen - x.origen; }).slice(0, 3);
             h += '<section class="se-sec" id="se-cert">' +
-                cab('Bloque 03', (usaFicha ? 'Detalle de obra ejecutada por capítulos' : 'Certificación a origen por capítulos'), (usaFicha ? 'Importes de la ficha de seguimiento económico (columna Origen) · sin IVA' : 'Importes certificados por capítulo técnico · sin IVA'),
+                cab('Bloque 03', (usaFicha ? 'Detalle de obra ejecutada por capítulos' : 'Certificación a origen por capítulos'), (usaFicha ? 'Importes de la ficha de seguimiento económico (columnas Mes y Origen) · sin IVA' : 'Importes certificados por capítulo técnico · sin IVA'),
                     '<div class="se-tot"><span>' + (usaFicha ? 'Total obra ejecutada a origen' : 'Total certificación mostrada') + '</span><strong>' + esc(fmtMoney(totOriF)) + '</strong></div>') +
-                '<div class="se-2"><div class="se-panel se-flush"><div class="se-ph"><span>Capítulos de obra</span><small>' + capsOri.length + ' capítulos' + (usaFicha ? ' · columna Origen' : '') + '</small></div>' +
-                (capsOri.length ? '<div class="se-lista">' + capsOri.map(function (x, i) {
-                    var pc = totOriF ? (x.origen / totOriF) * 100 : null;
+                '<div class="se-2"><div class="se-panel se-flush"><div class="se-ph"><span>Capítulos de obra</span><small>' + capsMes.length + ' capítulos' + (usaFicha ? ' · columna Mes' : '') + '</small></div>' +
+                (capsMes.length ? '<div class="se-lista">' + capsMes.map(function (x, i) {
+                    var pc = totMesF ? (x.mes / totMesF) * 100 : null;
                     return '<div class="se-row"><div class="se-row-l"><span class="se-num">' + ('0' + (i + 1)).slice(-2) + '</span>' +
                         '<div><b>' + esc(x.descripcion || '') + '</b><small>' + esc(x.codigo || '') + '</small></div></div>' +
-                        '<div class="se-row-r"><b class="se-mono">' + esc(fmtMoney(x.origen)) + '</b>' +
+                        '<div class="se-row-r"><b class="se-mono">' + esc(fmtMoney(x.mes)) + '</b>' +
                         (pc !== null ? '<span class="se-chip-ok">' + esc(fmtNum(pc, 1)) + ' %</span>' : '') + '</div></div>';
-                }).join('') + '</div>' : '<div class="se-note">Sin importes en la columna Origen de esta certificación.</div>') +
-                '<div class="se-pie"><span>Total obra ejecutada a origen</span><b class="se-mono">' + esc(fmtMoney(totOriF)) + '</b></div></div>' +
+                }).join('') + '</div>' : '<div class="se-note">Sin importes en la columna Mes de esta ficha.</div>') +
+                '<div class="se-pie"><span>' + (usaFicha ? 'Total obra ejecutada en el mes' : 'Total certificado en el mes') + '</span><b class="se-mono">' + esc(fmtMoney(totMesF)) + '</b></div></div>' +
                 '<div class="se-panel"><div class="se-ph2"><h3>Distribución de costes acumulados</h3><small>' + (usaFicha ? 'Columna Origen · sin IVA' : 'Sin IVA · pasa el ratón para resaltar') + '</small></div>' +
                 '<div class="se-bars">' + capsOri.map(function (x) {
                     return '<div class="se-bar"><div class="se-bar-t"><span>' + esc(x.descripcion || '') + '</span><b class="se-mono">' + esc(fmtMoney(x.origen)) + '</b></div>' +

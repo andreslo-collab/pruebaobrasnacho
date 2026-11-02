@@ -3571,10 +3571,10 @@ button:disabled { opacity: .6; cursor: default; }
     };
 
     var PESTANAS = [
+        { id: 'seguimiento_economico', etiqueta: 'Seguimiento económico' },
         { id: 'resumen', etiqueta: 'Resumen ejecutivo' },
         { id: 'presupuesto', etiqueta: 'Presupuesto por capítulos' },
         { id: 'certificacion_real', etiqueta: 'Certificación real' },
-        { id: 'seguimiento_economico', etiqueta: 'Seguimiento económico' },
         { id: 'facturacion', etiqueta: 'Facturación' },
         { id: 'def_materiales', etiqueta: 'Definición de materiales' },
         { id: 'certificaciones', etiqueta: 'Certificaciones quincenales' }
@@ -3817,7 +3817,7 @@ button:disabled { opacity: .6; cursor: default; }
             '<script>\n/*__REPORT_INICIO__*/\n' + r.report + '\n/*__REPORT_FIN__*/\n<\/script>\n' +
             '<script>\nvar DATOS = ' + json.replace(/<\//g, '<\\/') + ';\n' +
             '(function(){\n' +
-            '  var estado = { pestana: "resumen", fase: "todas", estado: "todos" };\n' +
+            '  var estado = { pestana: "seguimiento_economico", fase: "todas", estado: "todos" };\n' +
             '  function pintar() {\n' +
             '    var cuerpo = DXReport.render(DATOS, estado.pestana, { fase: estado.fase, estado: estado.estado });\n' +
             '    var tabs = DXReport.PESTANAS.map(function (t) {\n' +
@@ -3964,7 +3964,7 @@ button:disabled { opacity: .6; cursor: default; }
 
     var state = {
         vista: 'generador',          // generador | procesando | validacion | dashboard
-        pestana: 'resumen',
+        pestana: 'seguimiento_economico',
         identificador: '',
         periodo: '',
         archivos: {},                // zonaId -> File
@@ -5719,7 +5719,7 @@ button:disabled { opacity: .6; cursor: default; }
             b.onclick = function () {
                 var s = b.getAttribute('data-abrir');
                 var h = state.historial.filter(function (x) { return x.slug === s; })[0];
-                if (h) { state.datos = h.datos; state.identificador = h.identificador; state.pestana = 'resumen'; state.vista = 'dashboard'; render(); }
+                if (h) { state.datos = h.datos; state.identificador = h.identificador; state.pestana = 'seguimiento_economico'; state.vista = 'dashboard'; render(); }
             };
         });
     }
@@ -5987,7 +5987,7 @@ button:disabled { opacity: .6; cursor: default; }
             pem: pem, cert: cert, pct: pct, datos: state.datos
         });
 
-        state.pestana = 'resumen';
+        state.pestana = 'seguimiento_economico';
         state.vista = 'dashboard';
         render();
         window.scrollTo(0, 0);
@@ -6234,7 +6234,7 @@ button:disabled { opacity: .6; cursor: default; }
         state.lineas = {};
         state.textos = {};
         state.datos = null;
-        state.pestana = 'resumen';
+        state.pestana = 'seguimiento_economico';
         state.vista = 'generador';
         state.identificador = '';
         state.periodo = '';
@@ -6324,7 +6324,7 @@ button:disabled { opacity: .6; cursor: default; }
                 state.soloLectura = true;
                 state.filtroFase = 'todas';
                 state.filtroEstado = 'todos';
-                state.pestana = 'resumen';
+                state.pestana = 'seguimiento_economico';
                 state.vista = 'dashboard';
                 render();
             }).catch(function (e) {

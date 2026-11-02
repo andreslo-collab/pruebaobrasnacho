@@ -2945,7 +2945,57 @@ button:disabled { opacity: .6; cursor: default; }
             kpi('Cuota de IVA', fmtMoney(c.totales.iva), c.totales.ivaPct ? fmtNum(c.totales.ivaPct, 2) + ' %' : null) +
             kpi('Total con IVA', fmtMoney(c.totales.total), null, 'k-green') +
             '</div>';
-        if ((c.capitulos || []).length) {
+        var tcert = c.totalesCert || [];
+        if (tcert.length) {
+            var nT = function (s) { return (s === null || s === undefined || s === '') ? null : parseFloat(String(s).replace(/\./g, '').replace(',', '.')); };
+            var decT = 3;
+            tcert.some(function (r) { var m = String(r.origen || r.anterior || r.actual || '').match(/,(\d+)$/); if (m) { decT = m[1].length; return true; } return false; });
+            var fmtT = function (v) {
+                var p = Math.abs(v).toFixed(decT).split('.');
+                p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                return (v < 0 ? '-' : '') + p[0] + ',' + p[1];
+            };
+            var filasT = tcert.slice();
+            (c.capitulos || []).forEach(function (cp) {
+                if (!cp.cCalc) { return; }
+                var ya = filasT.some(function (r) { return r.tipo === 'cap' && String(r.codigo) === String(cp.codigo); });
+                if (ya) { return; }
+                var pos = filasT.length, q;
+                for (q = 0; q < filasT.length; q++) {
+                    if (filasT[q].tipo === 'cap' && parseInt(filasT[q].codigo, 10) < parseInt(cp.codigo, 10)) { pos = q + 1; }
+                }
+                var fv = function (v) { return (v === null || v === undefined || isNaN(v)) ? null : fmtT(v); };
+                filasT.splice(pos, 0, { tipo: 'cap', codigo: cp.codigo, descripcion: cp.descripcion, nivel: 1, origen: fv(cp.cOrigen), anterior: fv(cp.cAnterior), actual: fv(cp.cActual), calc: true });
+            });
+            var sumT = { origen: 0, anterior: 0, actual: 0 };
+            filasT.forEach(function (r) {
+                if (r.tipo !== 'cap') { return; }
+                ['origen', 'anterior', 'actual'].forEach(function (k) { var v = nT(r[k]); if (v !== null && !isNaN(v)) { sumT[k] += v; } });
+            });
+            var tx = c.totalesCertTxt || {};
+            var ivaT = (c.totales && c.totales.ivaPct !== null && c.totales.ivaPct !== undefined && !isNaN(c.totales.ivaPct)) ? c.totales.ivaPct : null;
+            var celT = function (v) { return '<td class="num"><strong>' + (v ? esc(v) : '') + '</strong></td>'; };
+            var cuerpoT = filasT.map(function (r) {
+                var esCap = r.tipo === 'cap';
+                var sang = esCap ? 0 : Math.max(0, r.nivel - 2) * 18;
+                var etq = (esCap ? 'Total Capítulo ' : 'Total SubCapítulo ') + esc(r.codigo) + ' - ' + esc(r.descripcion) +
+                    (r.calc ? ' <small>(calculado por diferencia con los totales)</small>' : '');
+                return '<tr' + (esCap ? ' style="background:#f0f1f2"' : '') + '><td style="padding-left:' + (10 + sang) + 'px"><strong>' + etq + '</strong></td>' +
+                    celT(r.origen) + celT(r.anterior) + celT(r.actual) + '</tr>';
+            }).join('');
+            var pieT = '<tr style="background:#16181a;color:#fff"><td><strong>Totales (sin IVA)</strong></td>' +
+                ['origen', 'anterior', 'actual'].map(function (k) { return '<td class="num"><strong>' + (tx[k] ? esc(tx[k]) : '') + '</strong></td>'; }).join('') + '</tr>';
+            if (ivaT !== null) {
+                pieT += '<tr style="background:#f0f1f2"><td><strong>Total con IVA (' + fmtNum(ivaT, ivaT % 1 === 0 ? 0 : 2) + ' %)</strong></td>' +
+                    ['origen', 'anterior', 'actual'].map(function (k) { var v = nT(tx[k]); return '<td class="num"><strong>' + ((v === null || isNaN(v)) ? '' : fmtMoney(v * (1 + ivaT / 100))) + '</strong></td>'; }).join('') + '</tr>';
+            }
+            var difT = nT(tx.origen) !== null ? Math.abs(sumT.origen - nT(tx.origen)) : 0;
+            html += '<div class="bloque">' + filaCabecera('Certificación por capítulos y subcapítulos', 'Totales de cada capítulo y subcapítulo tal como figuran en la certificación, en este orden: origen, anterior y actual (importes sin IVA).', filasT.length + ' líneas') +
+                '<div class="tabla-scroll"><table class="tabla"><thead><tr><th>Capítulo / subcapítulo</th><th class="num">Origen</th><th class="num">Anterior</th><th class="num">Actual</th></tr></thead><tbody>' +
+                cuerpoT + pieT + '</tbody></table></div>' +
+                (difT > 0.05 ? '<p class="formula">Aviso: la suma de los capítulos difiere del total a origen del PDF en ' + fmtMoney(difT) + '.</p>' : '') + '</div>';
+        }
+        if (!tcert.length && (c.capitulos || []).length) {
             var okN = function (v) { return v !== null && v !== undefined && !isNaN(v); };
             var f2 = function (v) { return (!okN(v) || v === 0) ? '—' : fmtMoney(v); };
             var filasC = c.capitulos.map(function (x) {
@@ -2974,7 +3024,7 @@ button:disabled { opacity: .6; cursor: default; }
                 tabla(['Código', 'Capítulo', 'Origen', 'Anterior', 'Actual'], cuerpoF, ['', '', 'num', 'num', 'num']) +
                 (difO > 0.05 ? '<p class="formula">Aviso: la suma de los capítulos difiere del total a origen del PDF en ' + fmtMoney(difO) + '.</p>' : '') + '</div>';
         }
-        if ((c.partidas || []).length) {
+        if (!tcert.length && (c.partidas || []).length) {
             html += '<details class="plegable bloque"><summary>Ver ' + c.partidas.length + ' partidas y subcapítulos</summary>' +
                 tabla(['Código', 'Tipo', 'Descripción', 'Certificado'],
                     c.partidas.map(function (x) {
@@ -4429,6 +4479,42 @@ button:disabled { opacity: .6; cursor: default; }
 
     function aplicarColumnasCert(res, crudos) {
         if (!res || !crudos || !crudos.length) { return; }
+        /* Totales de capítulo y subcapítulo tal cual figuran en el PDF (origen, anterior, actual), en su orden */
+        (function leerTotalesCert() {
+            var R2 = /^-?\d{1,3}(?:\.\d{3})*,\d{2,3}$/;
+            var lim = function (s) { return String(s).replace(/[€\s\u00a0]/g, ''); };
+            var colX = function (der) { return der < 427 ? 'origen' : (der < 520 ? 'anterior' : 'actual'); };
+            var filaDe = function (ref) {
+                var fila = [], q;
+                for (q = 0; q < crudos.length; q++) {
+                    if (crudos[q].p === ref.p && Math.abs(crudos[q].y - ref.y) <= 3) { fila.push(crudos[q]); }
+                }
+                fila.sort(function (a, b) { return a.x - b.x; });
+                return fila;
+            };
+            var lista = [], tt = null, z;
+            for (z = 0; z < crudos.length; z++) {
+                var it1 = crudos[z], s1 = String(it1.s || '');
+                var esTot = /^\s*Total\s+(?:Sub)?Cap[ií]tulo/i.test(s1), esTotales = /^\s*Totales\s*$/.test(s1);
+                if (!esTot && !esTotales) { continue; }
+                var fila = filaDe(it1), partes = [], vals = { origen: null, anterior: null, actual: null }, w;
+                for (w = 0; w < fila.length; w++) {
+                    var t1 = lim(fila[w].s);
+                    if (R2.test(t1) && (fila[w].x + (fila[w].w || 0)) >= 300) {
+                        var cc = colX(fila[w].x + (fila[w].w || 0));
+                        if (vals[cc] === null) { vals[cc] = t1; }
+                    } else if (t1 !== '€') { partes.push(String(fila[w].s)); }
+                }
+                if (esTotales) { tt = vals; continue; }
+                var etq = partes.join('').replace(/\s+/g, ' ').trim();
+                var mm = etq.match(/^Total\s+(Sub)?Cap[ií]tulo\s+(\S+?)\s*-\s*(.*)$/i);
+                var cod = mm ? mm[2] : '', des = mm ? mm[3].trim() : etq, esSub = !!(mm ? mm[1] : /Sub/i.test(etq));
+                var niv = !esSub ? 1 : (cod.indexOf('.') >= 0 ? cod.split('.').length : Math.max(2, Math.floor(cod.length / 2)));
+                lista.push({ tipo: esSub ? 'sub' : 'cap', codigo: cod, descripcion: des, nivel: niv, origen: vals.origen, anterior: vals.anterior, actual: vals.actual });
+            }
+            if (lista.length) { res.totalesCert = lista; }
+            if (tt) { res.totalesCertTxt = tt; }
+        })();
         var RE = /^-?\d{1,3}(?:\.\d{3})*,\d{2,3}$/;
         var limpio = function (s) { return String(s).replace(/[€\s\u00a0]/g, ''); };
         var aNum = function (s) { return parseFloat(limpio(s).replace(/\./g, '').replace(',', '.')); };

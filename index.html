@@ -1798,6 +1798,8 @@ button:disabled { opacity: .6; cursor: default; }
         var fase = (String(nombre).match(/fase\s*(\d+)/i) || [])[1] || null;
         var titulo = clean((rows[0] || [])[0] || '');   // la primera fila es el título de la fase
         var definiciones = [];
+        var notas = [];
+        var reNota = /^\s*(notas?|comentarios?|observaci[oó]n(?:es)?|obs\.?|ojo|importante)\b/i;
         var gfh = '', elemento = '';
         for (var r = 1; r < rows.length; r++) {
             var fila = rows[r] || [];
@@ -1809,8 +1811,19 @@ button:disabled { opacity: .6; cursor: default; }
             if (a && !b && !c && !d && !e && !f) { gfh = a; elemento = ''; continue; }
             // fila con el grupo en A y algo en B: nuevo elemento
             if (a) { gfh = a; }
+            // Sin estado y sin descripción: no es una definición. Son los comentarios del jefe de obra
+            // (o el título de un elemento) y no cuentan en ningún porcentaje ni recuento.
+            if (!e && (!c || reNota.test(c))) {
+                var marcaB = !!b && reNota.test(b);
+                var textoNota = [marcaB ? b : '', (c && reNota.test(c)) ? c : '', d].filter(function (x) { return !!x; }).join(' · ');
+                if (b && !marcaB) { elemento = b; }
+                if (textoNota) {
+                    notas.push({ fase: fase ? ('Fase ' + fase) : clean(nombre), grupo: gfh || 'Sin grupo', elemento: elemento || '—', texto: textoNota });
+                }
+                continue;
+            }
             if (b) { elemento = b; }
-            // fila de definición: necesita elemento, descripción o estado
+            // fila de definición: necesita elemento o descripción
             if (!elemento && !c) { continue; }
             definiciones.push({
                 fase: fase ? ('Fase ' + fase) : clean(nombre),
@@ -1824,17 +1837,18 @@ button:disabled { opacity: .6; cursor: default; }
                 hoja: nombre
             });
         }
-        return { nombre: nombre, fase: fase ? ('Fase ' + fase) : clean(nombre), faseNum: fase ? parseInt(fase, 10) : null, titulo: titulo, definiciones: definiciones };
+        return { nombre: nombre, fase: fase ? ('Fase ' + fase) : clean(nombre), faseNum: fase ? parseInt(fase, 10) : null, titulo: titulo, definiciones: definiciones, notas: notas };
     }
 
     function parseMaterialPhases(sheets) {
-        var out = { tipo: 'materiales', fases: [], items: [], avisos: [], hojas: [], estados: {}, grupos: [] };
+        var out = { tipo: 'materiales', fases: [], items: [], avisos: [], hojas: [], estados: {}, grupos: [], notas: [] };
         for (var s = 0; s < sheets.length; s++) {
             var sh = sheets[s];
             if (!/^\s*fase\s*\d+/i.test(String(sh.name || ''))) { continue; }
             var f = parseFaseSheet(sh.name, sh.rows || []);
             out.fases.push(f);
-            out.hojas.push(sh.name + ' (' + f.definiciones.length + ' definiciones)');
+            out.hojas.push(sh.name + ' (' + f.definiciones.length + ' definiciones' + ((f.notas || []).length ? ' · ' + f.notas.length + ' comentarios sin contar' : '') + ')');
+            out.notas = out.notas.concat(f.notas || []);
             for (var i = 0; i < f.definiciones.length; i++) {
                 var d = f.definiciones[i];
                 out.items.push({
@@ -3314,6 +3328,13 @@ button:disabled { opacity: .6; cursor: default; }
         } else {
             html += '<div class="bloque">' + sinDatos('Sin definiciones con ese filtro', 'Cambia el filtro de fase o de estado.') + '</div>';
         }
+        var notasM = (m.notas || []).filter(function (n) { return ff === 'todas' || n.fase === ff; });
+        if (m._esLibroDefinicion && notasM.length) {
+            html += '<div class="bloque"><details class="plegable"><summary>Comentarios del jefe de obra <span class="chip">' + notasM.length + '</span></summary>' +
+                '<p style="font-size:12px;color:#6b7075;margin:8px 0;">Anotaciones del Excel de definición. No cuentan como definiciones ni entran en ningún porcentaje.</p>' +
+                tabla(['Fase', 'Elemento', 'Comentario'], notasM.map(function (n) { return [esc(n.fase), esc(n.elemento), esc(n.texto)]; }), ['', '', '']) +
+                '</details></div>';
+        }
         return html;
     }
 
@@ -3446,23 +3467,18 @@ button:disabled { opacity: .6; cursor: default; }
             var sB = 0, sI = 0, sT = 0, sC = 0;
             fa.forEach(function (f) { sB += f.base || 0; sI += f.iva || 0; sT += f.total || 0; sC += f.cobrado || 0; });
             var kps = sg.kpis || {};
-            var saldoF = (kps.totalSaldoFavorEnue && kps.totalSaldoFavorEnue.valor !== undefined && kps.totalSaldoFavorEnue.valor !== null && !isNaN(kps.totalSaldoFavorEnue.valor)) ? kps.totalSaldoFavorEnue.valor : (sT - sC);
+            var saldoF = (kps.totalSaldoFavorEnue && kps.totalSaldoFavorEnue.valor !== undefined && kps.totalSaldoFavorEnue.valor !== null && !isNaN(kps.totalSaldoFavorEnue.valor)) ? kps.totalSaldoFavorEnue.valor : null;
             html += '<div class="bloque">' + filaCabecera('Facturas emitidas al cliente', 'Todas las facturas emitidas en la obra, con el importe total con IVA.', fa.length + (fa.length === 1 ? ' factura' : ' facturas')) +
                 '<div class="kpis">' + kpi('Facturas emitidas', String(fa.length)) + kpi('Total facturado', mf(sT), 'IVA incluido') +
-                kpi('Total cobrado', mf(sC)) + kpi('Saldo pendiente de pago', mf(saldoF), 'según ficha de seguimiento', 'k-green') + '</div>' +
-                tabla(['Factura', 'Fecha', 'Concepto', 'Origen', 'Base', 'IVA', 'Total con IVA', 'Cobro', 'Cobrado'],
+                (saldoF !== null ? kpi('Saldo pendiente de pago', mf(saldoF), 'según ficha de seguimiento', 'k-green') : '') + '</div>' +
+                tabla(['Factura', 'Fecha', 'Concepto', 'Origen', 'Base', 'IVA', 'Total con IVA'],
                     fa.map(function (f) {
-                        var pagada = f.cobrado !== null && f.cobrado !== undefined && f.cobrado > 0;
                         var origen = (f.origen !== null && f.origen !== undefined) ? mf(f.origen) : esc(f.origenTxt || '—');
-                        var cobro = pagada
-                            ? '<span class="fc-chip ok">Cobrada</span><small class="fc-nota">' + esc([f.forma, f.fechaPago].filter(Boolean).join(' · ')) + '</small>'
-                            : '<span class="fc-chip pend">Pendiente de cobro</span>';
                         return ['<span class="mono">' + esc(f.factura) + '</span>', esc(f.fecha), esc(f.concepto), origen,
-                            mf(f.base), mf(f.iva), '<span class="fc-tot">' + mf(f.total) + '</span>', cobro,
-                            pagada ? mf(f.cobrado) : '—'];
+                            mf(f.base), mf(f.iva), '<span class="fc-tot">' + mf(f.total) + '</span>'];
                     }).concat([['<strong>Total</strong>', '', '', '', '<strong>' + mf(sB) + '</strong>', '<strong>' + mf(sI) + '</strong>',
-                        '<span class="fc-tot">' + mf(sT) + '</span>', '', '<strong>' + mf(sC) + '</strong>']]),
-                    ['', '', '', 'num', 'num', 'num', 'num', '', 'num']) + '</div>';
+                        '<span class="fc-tot">' + mf(sT) + '</span>']]),
+                    ['', '', '', 'num', 'num', 'num', 'num']) + '</div>';
         }
         if (c) {
             html += '<div class="bloque">' + filaCabecera('Certificación de este periodo', 'Importes de la certificación cargada.') +
@@ -5090,7 +5106,10 @@ button:disabled { opacity: .6; cursor: default; }
                             return '<span class="chip-estado ' + claseEstado(g.estado) + '">' + g.n + ' ' + esc(g.estado) + '</span>';
                         }).join('') + '</div>' +
                         '<div class="val-nota">Estas definiciones alimentan las pestañas <strong>Definición de materiales</strong> y ' +
-                        '<strong>Datos y resumen de obra</strong>. Se pueden editar después en el dashboard si hiciera falta.</div>';
+                        '<strong>Datos y resumen de obra</strong>. Se pueden editar después en el dashboard si hiciera falta.</div>' +
+                        ((mat.notas || []).length ? '<details class="plegable"><summary>Filas tratadas como comentario: ' + mat.notas.length + ' (no cuentan en el análisis)</summary><div class="val-nota">' +
+                            mat.notas.slice(0, 30).map(function (n) { return esc(n.fase) + ' · ' + esc(n.elemento) + ': ' + esc(n.texto); }).join('<br>') +
+                            (mat.notas.length > 30 ? '<br>…' : '') + '</div></details>' : '');
                 } else if (mitems.length) {
                     var fm = '';
                     for (var m2 = 0; m2 < mitems.length; m2++) {

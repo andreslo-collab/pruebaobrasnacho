@@ -2955,7 +2955,15 @@ button:disabled { opacity: .6; cursor: default; }
                 p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
                 return (v < 0 ? '-' : '') + p[0] + ',' + p[1];
             };
-            var filasT = tcert.slice();
+            var filasT = tcert.map(function (r) {
+                if ((r.origen === null || r.origen === undefined || r.origen === '') && (r.anterior || r.actual)) {
+                    var so = (nT(r.anterior) || 0) + (nT(r.actual) || 0);
+                    var cp = {}; Object.keys(r).forEach(function (kk) { cp[kk] = r[kk]; });
+                    cp.origen = fmtT(Math.round(so * 1000) / 1000);
+                    return cp;
+                }
+                return r;
+            });
             (c.capitulos || []).forEach(function (cp) {
                 if (!cp.cCalc) { return; }
                 var ya = filasT.some(function (r) { return r.tipo === 'cap' && String(r.codigo) === String(cp.codigo); });
@@ -3111,8 +3119,10 @@ button:disabled { opacity: .6; cursor: default; }
         }
         var hayAnt = (ant !== null || des !== null || pen !== null);
 
+        var pagosFilas = (s.facturas || []).filter(function (x) { return x && okN(x.cobrado) && x.cobrado !== 0; });
         var nav = [['se-resumen', 'Resumen global'], ['se-lectura', 'Lectura rápida']];
         if (f) { nav.push(['se-facturas', 'Factura y cobros']); }
+        if (pagosFilas.length) { nav.push(['se-pagos', 'Pagos recibidos']); }
         if (caps.length) { nav.push(['se-cert', 'Certificación a origen']); }
         /* el anticipo no se destaca en la navegación */
         if (saldo !== null) { nav.push(['se-saldo', 'Saldo pendiente de pago']); }
@@ -3182,6 +3192,28 @@ button:disabled { opacity: .6; cursor: default; }
                     (emit !== null && pagos !== null ? ' &nbsp;·&nbsp; ' : '') +
                     (pagos !== null ? 'Pagos recibidos: <b>' + esc(fmtMoney(pagos)) + '</b>' : '') + '</td></tr></tfoot>' : '') +
                 '</table></div></div></section>';
+        }
+
+        /* 3b · pagos recibidos (ficha de seguimiento) */
+        if (pagosFilas.length) {
+            var sumaPagos = pagosFilas.reduce(function (a, x) { return a + x.cobrado; }, 0);
+            var totalPagado = okN(pagos) ? pagos : sumaPagos;
+            h += '<section class="se-sec" id="se-pagos">' +
+                cab('Pagos del cliente', 'Pagos recibidos', 'Total pagado y desglose por factura (importes con IVA)') +
+                '<div class="se-grid">' +
+                card('Total pagado por el cliente (IVA incl.)', mon(totalPagado), 'se-c-ok', '<span>' + pagosFilas.length + (pagosFilas.length === 1 ? ' pago registrado' : ' pagos registrados') + '</span>') +
+                '</div>' +
+                '<div class="se-panel se-flush"><div class="se-scroll"><table class="se-tab"><thead><tr>' +
+                '<th class="c">Nº factura</th><th>Fecha factura</th><th>Concepto</th><th class="r">Total factura</th><th>Forma de pago</th><th>Fecha de pago</th><th class="r">Importe pagado</th></tr></thead><tbody>' +
+                pagosFilas.map(function (x) {
+                    return '<tr><td class="c"><span class="se-mono">' + esc(x.factura || '—') + '</span></td><td>' + esc(x.fecha || '—') + '</td><td>' + esc(x.concepto || '—') + '</td>' +
+                        '<td class="r se-mono">' + esc(mon(okN(x.total) ? x.total : null)) + '</td><td>' + esc(x.forma || '—') + '</td><td>' + esc(x.fechaPago || '—') + '</td>' +
+                        '<td class="r se-mono"><b>' + esc(mon(x.cobrado)) + '</b></td></tr>';
+                }).join('') +
+                '</tbody><tfoot><tr><td colspan="6">Total pagado</td><td class="r se-mono"><b>' + esc(mon(totalPagado)) + '</b></td></tr></tfoot>' +
+                '</table></div></div>' +
+                (okN(pagos) && Math.abs(sumaPagos - pagos) > 0.01 ? '<div class="se-note">Los pagos desglosados suman ' + esc(fmtMoney(sumaPagos)) + '; el total de la ficha es ' + esc(fmtMoney(pagos)) + '.</div>' : '') +
+                '</section>';
         }
 
         /* 4 · certificación a origen */
